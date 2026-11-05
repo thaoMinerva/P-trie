@@ -1,0 +1,73 @@
+{
+  "_doc": "Paramètres biologiques et de simulation centralisés. Unités : µm, secondes simulées, u = unité de matière abstraite.",
+  "world": {
+    "width": 800, "height": 600, "cellSize": 10, "gridVolume": 1000,
+    "dt": 0.1, "ticksPerSecond": 30, "maxCells": 2500, "diffusionEvery": 2,
+    "dayLength": 600, "nightLight": 0.25, "lightDepth": 260,
+    "tempLeft": 14, "tempRight": 36
+  },
+  "cell": {
+    "biomassDensity": 1.0,
+    "nadPerVolume": 0.5,
+    "atpCapPerVolume": 1.0,
+    "storageBase": 0.6,
+    "maintenance": 0.008,
+    "ribosomeRate": 0.025,
+    "riboKmAa": 0.05, "riboKmAtp": 0.25, "riboKmP": 0.005,
+    "aaPerBiomass": 1, "atpPerBiomass": 4, "pPerBiomass": 0.1,
+    "kmCofactor": 0.05,
+    "activeTransportCost": 0.2,
+    "maxInternalConc": 2.0,
+    "divisionAtpPerVolume": 0.3,
+    "founderAtpPerVolume": 0.8,
+    "founderReservePerVolume": 0.3,
+    "founderAaPerVolume": 0.1,
+    "prokSizeMin": 0.4, "prokSizeMax": 2.5,
+    "eukSizeMin": 2.5, "eukSizeMax": 10,
+    "membraneCapacity": 0.35,
+    "cycle": { "S": 6, "G2": 3, "M": 3, "atpPerVolumeS": 0.2 },
+    "prokDivisionTime": 1.0,
+    "rosDecay": 0.05, "rosThreshold": 0.02, "rosDamage": 2.0,
+    "toxinThreshold": 0.004, "toxinDamage": 6.0,
+    "ethanolThreshold": 0.15, "ethanolDamage": 0.6,
+    "starvationDamage": 0.35,
+    "repairRate": 0.01, "repairCost": 0.05,
+    "tempTolLow": 18, "tempTolHigh": 10, "tempDamage": 0.01,
+    "pHTol": 2.2, "pHDamage": 0.05,
+    "osmoHypoDamage": 0.06, "osmoHyperDamage": 0.05, "salinityRef": 0.15, "salinityHigh": 0.55,
+    "autophagyRate": 0.01, "minBiomassFraction": 0.45,
+    "brownian": 0.6, "tumbleProb": 0.25, "senseRadius": 45,
+    "maxAge": 2400
+  },
+  "mutation": {
+    "concSigma": 0.08, "sizeSigma": 0.03, "organelleProb": 0.02, "lossProb": 0.004, "ribosomeProb": 0.02, "colorDrift": 2
+  },
+  "interactions": {
+    "phagoSizeRatio": 1.6, "phagoBaseProb": 0.06, "phagoCost": 0.05,
+    "parasiteSizeRatio": 1.3, "maxParasitesPerHost": 1, "crowdLimit": 30,
+    "symbiosisMaxPartners": 2, "bondBreakDistance": 1.6
+  },
+  "env": {
+    "o2Sat": 0.010, "o2Exchange": 0.02, "co2Atm": 0.003, "co2Exchange": 0.01, "n2Sat": 0.01, "n2Exchange": 0.02,
+    "surfaceRows": 3,
+    "toxinDecay": 0.01, "proteinDecay": 0.0015, "starchDecay": 0.0003,
+    "pHBase": 7.0, "acidRef": 0.004, "acidStrength": 1.2,
+    "regen": {
+      "glucose":   { "patches": 6, "radius": 9,  "cap": 8,   "rate": 0.06, "background": 0.5 },
+      "starch":    { "patches": 3, "radius": 10, "cap": 12,  "rate": 0.03, "background": 0.2, "bias": "bottom" },
+      "cellulose": { "patches": 4, "radius": 12, "cap": 25,  "rate": 0.04, "background": 0.0, "bias": "bottom" },
+      "nh4":       { "patches": 5, "radius": 10, "cap": 6,   "rate": 0.04, "background": 0.8 },
+      "phosphate": { "patches": 4, "radius": 12, "cap": 3,   "rate": 0.02, "background": 0.6, "bias": "bottom" },
+      "protein":   { "patches": 2, "radius": 8,  "cap": 5,   "rate": 0.01, "background": 0.0 },
+      "co2":       { "patches": 0, "radius": 0,  "cap": 4,   "rate": 0.004, "background": 1.0 }
+    },
+    "initial": { "glucose": 3, "nh4": 2.5, "phosphate": 1.5, "starch": 2, "cellulose": 4, "protein": 0.5, "co2": 3, "o2": 10, "n2": 10 }
+  },
+  "score": {
+    "interval": 10, "sizeWeight": 0.08, "diversityWeight": 0.15, "generationBonus": 1.0, "pointsFactor": 1.0
+  },
+  "game": {
+    "startPoints": 150, "founders": 10, "launchBase": 30, "costPerEnzyme": 2, "costPerOrganelle": 1.5, "costEukaryote": 10, "costCustomEnzyme": 3,
+    "ghostTarget": 5, "ghostSpawnInterval": 90, "ghostRetireProb": 0.002
+  }
+}

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Petri</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='%2316455c' stroke='%23cfe' stroke-width='6'/><circle cx='38' cy='42' r='10' fill='%2390be6d'/><circle cx='62' cy='60' r='7' fill='%23f9c74f'/></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🧫 <b>Petri</b> <small>simulateur de microorganismes</small></div>
+    <nav class="tabs">
+      <button class="tab on" data-tab="monde">🌍 Monde</button>
+      <button class="tab" data-tab="editeur">🧬 Éditeur de cellule</button>
+      <button class="tab" data-tab="atelier">⚗️ Atelier d'enzymes</button>
+      <button class="tab" data-tab="populations">📈 Populations</button>
+      <button class="tab" data-tab="archives">🗄️ Archives</button>
+    </nav>
+    <div class="hud">
+      <span class="pill points" title="Points de conception">⭐ <b id="hud-points">0</b> pts</span>
+      <span class="pill" title="Temps simulé">⏱ <span id="hud-time">0</span></span>
+      <span class="pill" id="hud-day">☀️</span>
+      <span class="pill" title="Cellules vivantes">🦠 <span id="hud-cells">0</span></span>
+      <span class="speeds">
+        <button class="speed" data-speed="0" title="Pause (espace)">⏸</button>
+        <button class="speed" data-speed="1">×1</button>
+        <button class="speed" data-speed="2">×2</button>
+        <button class="speed" data-speed="5">×5</button>
+      </span>
+      <span class="pill muted" title="Vitesse réellement atteinte">réel <span id="hud-tps">–</span></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="view on" id="view-monde">
+      <div class="world-layout">
+        <div class="world-main">
+          <div class="canvas-wrap">
+            <canvas id="world-canvas"></canvas>
+            <div class="map-tools">
+              <label>Calque <select id="layer-select"></select></label>
+              <button class="btn small" id="btn-fit">⤢ Recadrer</button>
+            </div>
+            <div class="map-legend small">Molette : zoom · glisser : déplacer · clic : fiche de la cellule</div>
+          </div>
+          <div class="chart-wrap"><canvas id="world-chart" class="chart"></canvas></div>
+        </div>
+        <aside class="sidebar">
+          <section class="card"><h3>Populations vivantes</h3><div id="mini-pops"></div></section>
+          <section class="card"><h3>Fiche de la cellule</h3><div id="cell-sheet"><div class="muted">Cliquez sur une cellule pour afficher sa fiche.</div></div></section>
+          <section class="card"><h3>Journal</h3><div id="journal" class="journal"></div></section>
+          <section class="card">
+            <h3>Partie</h3>
+            <div class="btn-row">
+              <button class="btn small" id="btn-save">💾 Sauvegarder</button>
+              <button class="btn small" id="btn-new-world">🌱 Nouveau monde</button>
+              <button class="btn small danger" id="btn-reset">Tout effacer</button>
+            </div>
+            <p class="small muted">Sauvegarde automatique toutes les 30 s (profil : localStorage, monde : IndexedDB).</p>
+          </section>
+        </aside>
+      </div>
+    </section>
+    <section class="view" id="view-editeur"><div id="editor-root"></div></section>
+    <section class="view" id="view-atelier"><div id="workshop-root"></div></section>
+    <section class="view" id="view-populations"><div id="populations-root" class="page"></div></section>
+    <section class="view" id="view-archives"><div id="archives-root" class="page"></div></section>
+  </main>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

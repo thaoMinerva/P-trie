@@ -1,0 +1,18 @@
+{
+  "_doc": "Options d'enveloppe. Valeurs utilisées par simulation/phenotype.js.",
+  "wall": { "name": "Paroi", "maxThickness": 1.0, "massPerThickness": 0.25, "exchangePenalty": 1.2, "predationProtect": 0.85, "osmoProtect": 0.95, "toxinProtect": 0.5, "phagocytosisBlock": 0.08,
+    "description": "Peptidoglycane (procaryote) ou cellulose/chitine (eucaryote). Protège de la prédation, de l'osmose et des toxines mais ralentit les échanges avec le milieu." },
+  "capsule": { "name": "Capsule", "mass": 0.06, "exchangePenalty": 0.15, "predationProtect": 0.4, "toxinProtect": 0.2,
+    "description": "Couche de polysaccharides : rend la cellule difficile à phagocyter." },
+  "motility": {
+    "aucune":   { "name": "Aucune (mouvement brownien)", "speed": 0.0, "costPerSpeed": 0, "mass": 0, "types": ["procaryote", "eucaryote"] },
+    "flagelle": { "name": "Flagelle", "speedPerUnit": 18, "costPerSpeed": 0.0009, "mass": 0.02, "maxUnits": 3, "types": ["procaryote", "eucaryote"],
+      "description": "Moteur rotatif (procaryote) ou fouet (eucaryote). Chimiotactisme : la cellule remonte les gradients de nourriture." },
+    "cils":     { "name": "Cils", "speedPerUnit": 30, "costPerSpeed": 0.0012, "mass": 0.04, "maxUnits": 3, "types": ["eucaryote"],
+      "description": "Battement coordonné de centaines de cils : rapide mais coûteux. Réservé aux eucaryotes." }
+  },
+  "parasite": { "name": "Suçoir (parasitisme)", "mass": 0.04, "drainRate": 0.0008,
+    "description": "Permet de se fixer à un hôte plus grand d'une autre espèce et d'y prélever sucres, acides aminés et pyruvate." },
+  "adhesins": { "name": "Adhésines symbiotiques", "mass": 0.02, "exchangeRate": 0.003,
+    "description": "Collent la cellule à un partenaire d'une autre espèce qui en possède aussi : les deux échangent leurs métabolites (glucose, NH₄⁺, O₂, CO₂, acides aminés, déchets)." }
+}

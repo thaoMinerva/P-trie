@@ -1,0 +1,28 @@
+{
+  "_doc": "Métabolites. elements : composition simplifiée (C, N, P, Nic = noyau nicotinamide NAD/NADH). energy : contenu énergétique libre en équivalents ATP (référence CO2/NH4/H2O/O2 = 0). env : existe comme champ dans le monde. transport : 'actif' (pompé, sature, coûte de l'ATP), 'passif' (diffusion selon le gradient), 'aucun'. perm : perméabilité membranaire (u / µm² / s).",
+  "list": [
+    { "id": "glucose",   "name": "Glucose",            "elements": { "C": 6 },             "energy": 38.0, "env": true,  "transport": "actif",  "perm": 0.04, "kt": 0.0015, "diffusion": 0.10, "color": "#f2c14e" },
+    { "id": "pyruvate",  "name": "Pyruvate",           "elements": { "C": 3 },             "energy": 14.5, "env": true,  "transport": "passif", "perm": 0.003, "diffusion": 0.10, "color": "#e5989b" },
+    { "id": "lactate",   "name": "Lactate",            "elements": { "C": 3 },             "energy": 17.1, "env": true,  "transport": "passif", "perm": 0.05, "diffusion": 0.10, "acid": 1.0, "color": "#ff8c42" },
+    { "id": "ethanol",   "name": "Éthanol",            "elements": { "C": 2 },             "energy": 16.0, "env": true,  "transport": "passif", "perm": 1.0, "diffusion": 0.12, "toxicity": 0.15, "color": "#b8f2e6" },
+    { "id": "acetate",   "name": "Acétate",            "elements": { "C": 2 },             "energy": 10.6, "env": true,  "transport": "passif", "perm": 0.05, "diffusion": 0.10, "acid": 1.0, "color": "#ffd6a5" },
+    { "id": "aa",        "name": "Acides aminés",      "elements": { "C": 3, "N": 1 },     "energy": 17.5, "env": true,  "transport": "actif",  "perm": 0.015, "kt": 0.0015, "diffusion": 0.08, "color": "#9b5de5" },
+    { "id": "nh4",       "name": "Ammonium (NH₄⁺)",    "elements": { "N": 1 },             "energy": 0.0,  "env": true,  "transport": "actif",  "perm": 0.025, "kt": 0.0010, "diffusion": 0.12, "color": "#00bbf9" },
+    { "id": "n2",        "name": "Diazote (N₂)",       "elements": { "N": 2 },             "energy": 0.0,  "env": true,  "transport": "passif", "perm": 2.0, "diffusion": 0.18, "color": "#a0c4ff" },
+    { "id": "phosphate", "name": "Phosphate",          "elements": { "P": 1 },             "energy": 0.0,  "env": true,  "transport": "actif",  "perm": 0.004, "kt": 0.0005, "diffusion": 0.08, "color": "#caffbf" },
+    { "id": "o2",        "name": "Dioxygène (O₂)",     "elements": {},                     "energy": 0.0,  "env": true,  "transport": "passif", "perm": 5.0, "diffusion": 0.20, "color": "#4cc9f0" },
+    { "id": "co2",       "name": "CO₂",                "elements": { "C": 1 },             "energy": 0.0,  "env": true,  "transport": "passif", "perm": 5.0, "diffusion": 0.20, "acid": 0.15, "color": "#adb5bd" },
+    { "id": "toxin",     "name": "Toxine",             "elements": { "C": 3 },             "energy": 14.0, "env": true,  "transport": "passif", "perm": 0.004, "diffusion": 0.05, "color": "#d00000" },
+    { "id": "starch",    "name": "Amidon (milieu)",    "elements": { "C": 6 },             "energy": 38.2, "env": true,  "transport": "aucun",  "diffusion": 0.004, "color": "#e9edc9" },
+    { "id": "cellulose", "name": "Cellulose (litière)", "elements": { "C": 6 },            "energy": 38.2, "env": true,  "transport": "aucun",  "diffusion": 0.001, "color": "#7f5539" },
+    { "id": "protein",   "name": "Protéines (matière morte)", "elements": { "C": 3, "N": 1 }, "energy": 17.6, "env": true, "transport": "aucun", "diffusion": 0.006, "color": "#b5838d" },
+    { "id": "reserve",   "name": "Réserve (glycogène/amidon interne)", "elements": { "C": 6 }, "energy": 38.5, "env": false, "dead": "starch" },
+    { "id": "biomass",   "name": "Biomasse",           "elements": { "C": 3, "N": 1, "P": 0.1 }, "energy": 18.0, "env": false },
+    { "id": "phagosome", "name": "Proie en digestion", "elements": { "C": 3, "N": 1, "P": 0.1 }, "energy": 18.0, "env": false },
+    { "id": "ros",       "name": "Espèces réactives de l'O₂", "elements": {},               "energy": 0.3,  "env": false },
+    { "id": "nad",       "name": "NAD⁺",               "elements": { "Nic": 1 },           "energy": 0.0,  "env": false, "cofactor": true },
+    { "id": "nadh",      "name": "NADH",               "elements": { "Nic": 1 },           "energy": 2.6,  "env": false, "cofactor": true },
+    { "id": "atp",       "name": "ATP",                "elements": {},                     "energy": 1.0,  "env": false, "cofactor": true },
+    { "id": "light",     "name": "Lumière (photons)",  "elements": {},                     "energy": 5.0,  "env": false, "field": true }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "petri",
+  "version": "0.1.0",
+  "description": "Petri – simulateur multi-populations de microorganismes (prototype web 2D)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node tools/serve.js",
+    "test": "node --test tests/*.test.js",
+    "sim": "node tools/headless.js"
+  },
+  "engines": { "node": ">=20" }
+}

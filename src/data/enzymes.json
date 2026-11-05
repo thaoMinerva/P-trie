@@ -1,0 +1,130 @@
+{
+  "_doc": "Bibliothèque d'enzymes (voies métaboliques simplifiées et regroupées). Stœchiométrie équilibrée en C, N, P et Nic ; énergie libre ΔG ≤ 0 (vérifié par les tests). km : constante de Michaelis par substrat (concentration interne u/µm³, ou du milieu pour les enzymes sécrétées), '_' = valeur par défaut. kcat : flux par unité de concentration d'enzyme et par µm³ de cellule (u/s). location : cytosol | mitochondrie | chloroplaste | membrane | secrete. Chez les procaryotes, 'mitochondrie' et 'chloroplaste' deviennent 'membrane' (limité par la surface). regulation : atpHigh (actif quand l'ATP est abondant), atpLow (actif quand l'ATP manque). cost.synth : biomasse requise par unité de concentration et par µm³ ; cost.upkeep : ATP/s par unité de concentration et par µm³ ; cost.volume : fraction du volume par unité de concentration.",
+  "list": [
+    { "id": "glycolyse", "name": "Glycolyse", "category": "Catabolisme des sucres",
+      "description": "Hexokinase → pyruvate kinase. Glucose + 2 NAD⁺ → 2 pyruvate + 2 NADH + 2 ATP.",
+      "substrates": { "glucose": 1, "nad": 2 }, "products": { "pyruvate": 2, "nadh": 2, "atp": 2 },
+      "location": "cytosol", "km": { "_": 0.05 }, "kcat": 0.08, "tOpt": 32, "tWidth": 16, "pHOpt": 7.0, "pHWidth": 2.2,
+      "cofactors": ["NAD", "ATP/Mg"], "inhibitors": {}, "cost": { "synth": 0.02, "upkeep": 0.0015, "volume": 0.02 } },
+
+    { "id": "krebs", "name": "Pyruvate déshydrogénase + cycle de Krebs", "category": "Respiration",
+      "description": "Oxydation complète du pyruvate : pyruvate → 3 CO₂ + 5 NADH (FADH₂ assimilé) + 1 ATP (GTP).",
+      "substrates": { "pyruvate": 1, "nad": 5 }, "products": { "co2": 3, "nadh": 5, "atp": 1 },
+      "location": "mitochondrie", "km": { "_": 0.04 }, "kcat": 0.03, "tOpt": 32, "tWidth": 15, "pHOpt": 7.2, "pHWidth": 2.0,
+      "cofactors": ["NAD", "Mg"], "inhibitors": {}, "cost": { "synth": 0.03, "upkeep": 0.002, "volume": 0.025 } },
+
+    { "id": "chaine_respiratoire", "name": "Chaîne respiratoire (complexes I–IV + ATP synthase)", "category": "Respiration",
+      "description": "NADH + ½ O₂ → NAD⁺ + H₂O, couplé à ~2,5 ATP. Produit un peu d'espèces réactives de l'oxygène.",
+      "substrates": { "nadh": 1, "o2": 0.5 }, "products": { "nad": 1, "atp": 2.5, "ros": 0.02 },
+      "location": "mitochondrie", "km": { "o2": 0.0008, "_": 0.05 }, "kcat": 0.15, "tOpt": 32, "tWidth": 15, "pHOpt": 7.2, "pHWidth": 2.0,
+      "cofactors": ["NAD", "Fe", "Cu"], "inhibitors": {}, "cost": { "synth": 0.03, "upkeep": 0.002, "volume": 0.025 } },
+
+    { "id": "fermentation_lactique", "name": "Fermentation lactique (lactate déshydrogénase)", "category": "Fermentation",
+      "description": "Pyruvate + NADH → lactate + NAD⁺. Réoxyde le NADH sans oxygène ; le lactate acidifie le milieu.",
+      "substrates": { "pyruvate": 1, "nadh": 1 }, "products": { "lactate": 1, "nad": 1 },
+      "location": "cytosol", "km": { "_": 0.05 }, "kcat": 0.15, "tOpt": 34, "tWidth": 16, "pHOpt": 6.5, "pHWidth": 2.5,
+      "cofactors": ["NAD"], "inhibitors": {}, "cost": { "synth": 0.012, "upkeep": 0.001, "volume": 0.015 } },
+
+    { "id": "fermentation_alcoolique", "name": "Fermentation alcoolique (pyruvate décarboxylase + ADH)", "category": "Fermentation",
+      "description": "Pyruvate + NADH → éthanol + CO₂ + NAD⁺. L'éthanol est légèrement toxique.",
+      "substrates": { "pyruvate": 1, "nadh": 1 }, "products": { "ethanol": 1, "co2": 1, "nad": 1 },
+      "location": "cytosol", "km": { "_": 0.05 }, "kcat": 0.15, "tOpt": 30, "tWidth": 15, "pHOpt": 6.2, "pHWidth": 2.5,
+      "cofactors": ["NAD", "Mg"], "inhibitors": {}, "cost": { "synth": 0.014, "upkeep": 0.001, "volume": 0.015 } },
+
+    { "id": "lactate_oxydase", "name": "Lactate déshydrogénase inverse", "category": "Recyclage des déchets",
+      "description": "Lactate + NAD⁺ → pyruvate + NADH. Permet de vivre du lactate rejeté par les fermenteurs.",
+      "substrates": { "lactate": 1, "nad": 1 }, "products": { "pyruvate": 1, "nadh": 1 },
+      "location": "cytosol", "km": { "lactate": 0.004, "_": 0.05 }, "kcat": 0.04, "tOpt": 30, "tWidth": 15, "pHOpt": 6.8, "pHWidth": 2.2,
+      "cofactors": ["NAD"], "inhibitors": {}, "cost": { "synth": 0.015, "upkeep": 0.001, "volume": 0.015 } },
+
+    { "id": "ethanol_oxydation", "name": "Alcool + aldéhyde déshydrogénases", "category": "Recyclage des déchets",
+      "description": "Éthanol + 2 NAD⁺ → acétate + 2 NADH.",
+      "substrates": { "ethanol": 1, "nad": 2 }, "products": { "acetate": 1, "nadh": 2 },
+      "location": "cytosol", "km": { "ethanol": 0.004, "_": 0.05 }, "kcat": 0.04, "tOpt": 30, "tWidth": 15, "pHOpt": 7.0, "pHWidth": 2.2,
+      "cofactors": ["NAD", "Zn"], "inhibitors": {}, "cost": { "synth": 0.016, "upkeep": 0.001, "volume": 0.015 } },
+
+    { "id": "acetate_krebs", "name": "Acétyl-CoA synthétase + cycle de Krebs", "category": "Respiration",
+      "description": "Acétate + ATP → 2 CO₂ + 4 NADH. Oxydation de l'acétate (nécessite une chaîne respiratoire pour être rentable).",
+      "substrates": { "acetate": 1, "atp": 1, "nad": 4 }, "products": { "co2": 2, "nadh": 4 },
+      "location": "mitochondrie", "km": { "acetate": 0.004, "_": 0.05 }, "kcat": 0.04, "tOpt": 30, "tWidth": 15, "pHOpt": 7.0, "pHWidth": 2.0,
+      "cofactors": ["NAD", "ATP/Mg", "CoA"], "inhibitors": {}, "cost": { "synth": 0.02, "upkeep": 0.0015, "volume": 0.02 } },
+
+    { "id": "synthese_aa", "name": "Glutamate déshydrogénase + transaminases", "category": "Anabolisme",
+      "description": "Pyruvate + NH₄⁺ + NADH + ATP → acide aminé + NAD⁺. Assimilation de l'azote.",
+      "substrates": { "pyruvate": 1, "nh4": 1, "nadh": 1, "atp": 1 }, "products": { "aa": 1, "nad": 1 },
+      "location": "cytosol", "km": { "nh4": 0.004, "pyruvate": 0.02, "_": 0.05 }, "kcat": 0.05, "tOpt": 32, "tWidth": 15, "pHOpt": 7.2, "pHWidth": 2.0,
+      "cofactors": ["NAD", "ATP/Mg"], "inhibitors": { "aa": 0.3 }, "cost": { "synth": 0.02, "upkeep": 0.0015, "volume": 0.02 } },
+
+    { "id": "desamination", "name": "Désamination des acides aminés", "category": "Catabolisme azoté",
+      "description": "Acide aminé + NAD⁺ → pyruvate + NH₄⁺ + NADH. Utilise les protéines comme source d'énergie.",
+      "substrates": { "aa": 1, "nad": 1 }, "products": { "pyruvate": 1, "nh4": 1, "nadh": 1 },
+      "location": "cytosol", "km": { "aa": 0.3, "_": 0.05 }, "kcat": 0.03, "tOpt": 32, "tWidth": 15, "pHOpt": 7.2, "pHWidth": 2.0,
+      "cofactors": ["NAD"], "inhibitors": {}, "cost": { "synth": 0.015, "upkeep": 0.001, "volume": 0.015 } },
+
+    { "id": "photosystemes", "name": "Photosystèmes I et II", "category": "Photosynthèse",
+      "description": "Lumière + H₂O + NAD⁺ → NADH (NADPH) + ½ O₂ + 1,3 ATP. La lumière n'est pas consommée comme matière.",
+      "substrates": { "light": 1, "nad": 1 }, "products": { "nadh": 1, "o2": 0.5, "atp": 1.3, "ros": 0.03 },
+      "location": "chloroplaste", "km": { "light": 0.35, "_": 0.05 }, "kcat": 0.06, "tOpt": 28, "tWidth": 15, "pHOpt": 7.5, "pHWidth": 2.0,
+      "cofactors": ["Mg", "Mn", "Fe"], "inhibitors": {}, "cost": { "synth": 0.04, "upkeep": 0.002, "volume": 0.03 } },
+
+    { "id": "calvin", "name": "RuBisCO + cycle de Calvin", "category": "Photosynthèse",
+      "description": "6 CO₂ + 12 NADH + 18 ATP → glucose. Fixation du carbone (lente : la RuBisCO est une enzyme paresseuse).",
+      "substrates": { "co2": 6, "nadh": 12, "atp": 18 }, "products": { "glucose": 1, "nad": 12 },
+      "location": "chloroplaste", "km": { "co2": 0.0015, "_": 0.05 }, "kcat": 0.004, "tOpt": 28, "tWidth": 14, "pHOpt": 7.8, "pHWidth": 2.0,
+      "cofactors": ["Mg", "NAD", "ATP/Mg"], "inhibitors": { "o2": 0.05 }, "cost": { "synth": 0.04, "upkeep": 0.002, "volume": 0.03 } },
+
+    { "id": "nitrogenase", "name": "Nitrogénase", "category": "Anabolisme",
+      "description": "N₂ + 8 NADH + 16 ATP → 2 NH₄⁺ (+ H₂). Fixation de l'azote atmosphérique, très coûteuse et inhibée par l'O₂.",
+      "substrates": { "n2": 1, "nadh": 8, "atp": 16 }, "products": { "nh4": 2, "nad": 8 },
+      "location": "cytosol", "km": { "n2": 0.004, "_": 0.05 }, "kcat": 0.006, "tOpt": 30, "tWidth": 14, "pHOpt": 7.2, "pHWidth": 1.8,
+      "cofactors": ["Fe", "Mo", "ATP/Mg"], "inhibitors": { "o2": 0.0015 }, "cost": { "synth": 0.06, "upkeep": 0.003, "volume": 0.04 } },
+
+    { "id": "catalase", "name": "Catalase / superoxyde dismutase", "category": "Protection",
+      "description": "2 H₂O₂ → 2 H₂O + O₂. Détruit les espèces réactives de l'oxygène.",
+      "substrates": { "ros": 1 }, "products": {},
+      "location": "cytosol", "km": { "_": 0.01 }, "kcat": 0.5, "tOpt": 32, "tWidth": 18, "pHOpt": 7.0, "pHWidth": 2.5,
+      "cofactors": ["Fe"], "inhibitors": {}, "cost": { "synth": 0.01, "upkeep": 0.0008, "volume": 0.01 } },
+
+    { "id": "detoxifiase", "name": "Monooxygénase de détoxication", "category": "Protection",
+      "description": "Toxine + ATP → pyruvate. Neutralise les toxines et récupère leur carbone.",
+      "substrates": { "toxin": 1, "atp": 1 }, "products": { "pyruvate": 1 },
+      "location": "cytosol", "km": { "toxin": 0.003, "_": 0.05 }, "kcat": 0.08, "tOpt": 30, "tWidth": 16, "pHOpt": 7.0, "pHWidth": 2.2,
+      "cofactors": ["Fe", "ATP/Mg"], "inhibitors": {}, "cost": { "synth": 0.02, "upkeep": 0.0015, "volume": 0.015 } },
+
+    { "id": "toxine_synthase", "name": "Synthétase de toxine (polycétide)", "category": "Prédation chimique",
+      "description": "Pyruvate + 2 ATP → toxine, sécrétée dans le milieu. Tue les cellules voisines non protégées.",
+      "substrates": { "pyruvate": 1, "atp": 2 }, "products": { "toxin": 1 },
+      "location": "cytosol", "km": { "_": 0.05 }, "kcat": 0.02, "tOpt": 30, "tWidth": 15, "pHOpt": 7.0, "pHWidth": 2.2,
+      "cofactors": ["ATP/Mg"], "inhibitors": { "toxin": 0.05 }, "cost": { "synth": 0.03, "upkeep": 0.002, "volume": 0.02 } },
+
+    { "id": "glycogene_synthase", "name": "Glycogène / amidon synthase", "category": "Stockage",
+      "description": "Glucose + ATP → réserve. Ne fonctionne que si l'ATP est abondant. Capacité augmentée par les vacuoles.",
+      "substrates": { "glucose": 1, "atp": 1 }, "products": { "reserve": 1 },
+      "location": "cytosol", "km": { "_": 0.08 }, "kcat": 0.02, "tOpt": 30, "tWidth": 16, "pHOpt": 7.2, "pHWidth": 2.2,
+      "cofactors": ["ATP/Mg"], "regulation": "atpHigh", "inhibitors": {}, "cost": { "synth": 0.012, "upkeep": 0.0008, "volume": 0.012 } },
+
+    { "id": "phosphorylase", "name": "Glycogène phosphorylase", "category": "Stockage",
+      "description": "Réserve → glucose. Mobilise les réserves quand l'ATP manque (la nuit, en disette).",
+      "substrates": { "reserve": 1 }, "products": { "glucose": 1 },
+      "location": "cytosol", "km": { "_": 0.05 }, "kcat": 0.03, "tOpt": 30, "tWidth": 16, "pHOpt": 7.2, "pHWidth": 2.2,
+      "cofactors": [], "regulation": "atpLow", "inhibitors": { "glucose": 0.3 }, "cost": { "synth": 0.012, "upkeep": 0.0008, "volume": 0.012 } },
+
+    { "id": "amylase", "name": "Amylase (sécrétée)", "category": "Enzymes extracellulaires",
+      "description": "Amidon du milieu → glucose. Agit autour de la cellule : le glucose libéré profite aussi aux voisins.",
+      "substrates": { "starch": 1 }, "products": { "glucose": 1 },
+      "location": "secrete", "km": { "_": 0.004 }, "kcat": 0.012, "tOpt": 35, "tWidth": 16, "pHOpt": 6.8, "pHWidth": 2.2,
+      "cofactors": ["Ca"], "inhibitors": {}, "cost": { "synth": 0.03, "upkeep": 0.003, "volume": 0.01 } },
+
+    { "id": "cellulase", "name": "Cellulase (sécrétée)", "category": "Enzymes extracellulaires",
+      "description": "Cellulose de la litière → glucose. Lente et coûteuse, mais la cellulose est abondante.",
+      "substrates": { "cellulose": 1 }, "products": { "glucose": 1 },
+      "location": "secrete", "km": { "_": 0.006 }, "kcat": 0.025, "tOpt": 30, "tWidth": 15, "pHOpt": 5.5, "pHWidth": 2.0,
+      "cofactors": [], "inhibitors": { "glucose": 0.01 }, "cost": { "synth": 0.045, "upkeep": 0.004, "volume": 0.012 } },
+
+    { "id": "protease", "name": "Protéases (sécrétées)", "category": "Enzymes extracellulaires",
+      "description": "Protéines mortes → acides aminés. Indispensable aux décomposeurs.",
+      "substrates": { "protein": 1 }, "products": { "aa": 1 },
+      "location": "secrete", "km": { "_": 0.004 }, "kcat": 0.03, "tOpt": 34, "tWidth": 16, "pHOpt": 7.5, "pHWidth": 2.5,
+      "cofactors": ["Zn"], "inhibitors": {}, "cost": { "synth": 0.025, "upkeep": 0.003, "volume": 0.01 } }
+  ]
+}
