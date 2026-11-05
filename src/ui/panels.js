@@ -4,23 +4,24 @@ import { lineChart } from './charts.js';
 import { CAUSES } from '../simulation/metabolism.js';
 import { RES_LABELS } from '../simulation/population.js';
 import { PARAMS } from '../data/index.js';
+import { isMine, identity } from '../game/identity.js';
 
 const resName = (r) => (r === 'light' ? 'lumière' : RES_LABELS[r] || r);
 
 export function popSeries(world, filter = () => true, highlight = null) {
   return [...world.populations.values()].filter(filter).map((p) => ({
-    label: p.name, color: p.color, points: p.history, width: p.id === highlight ? 3 : p.ownerId === 'joueur' ? 2.2 : 1.2, dashed: p.extinct,
+    label: p.name, color: p.color, points: p.history, width: p.id === highlight ? 3 : isMine(p) ? 2.2 : 1.2, dashed: p.extinct,
   }));
 }
 
 export function renderMiniPops(root, world, { onHover, onFocus }) {
   clear(root);
-  const pops = world.livingPopulations().sort((a, b) => (a.ownerId === 'joueur' ? -1 : 1) - (b.ownerId === 'joueur' ? -1 : 1) || b.count - a.count);
+  const pops = world.livingPopulations().sort((a, b) => (isMine(a) ? -1 : 1) - (isMine(b) ? -1 : 1) || b.count - a.count);
   if (!pops.length) root.append(h('div', { class: 'muted small' }, 'Aucune population vivante.'));
   for (const p of pops) {
-    root.append(h('div', { class: `mini-pop ${p.ownerId === 'joueur' ? 'mine' : ''}`, onmouseenter: () => onHover(p.id), onmouseleave: () => onHover(null), onclick: () => onFocus(p) },
+    root.append(h('div', { class: `mini-pop ${isMine(p) ? 'mine' : ''}`, onmouseenter: () => onHover(p.id), onmouseleave: () => onHover(null), onclick: () => onFocus(p) },
       h('span', { class: 'swatch', style: { background: p.color } }),
-      h('span', { class: 'mini-name' }, p.name, h('small', {}, ` ${p.ownerId === 'joueur' ? '(vous)' : p.ownerName}`)),
+      h('span', { class: 'mini-name' }, p.name, h('small', {}, ` ${isMine(p) ? '(vous)' : p.ownerName}`)),
       h('span', { class: 'mini-count' }, p.count)));
   }
 }
@@ -28,8 +29,8 @@ export function renderMiniPops(root, world, { onHover, onFocus }) {
 export function renderPopulations(root, world, progression, ghostSource, actions) {
   clear(root);
   const living = world.livingPopulations();
-  const mine = living.filter((p) => p.ownerId === 'joueur');
-  const others = living.filter((p) => p.ownerId !== 'joueur');
+  const mine = living.filter((p) => isMine(p));
+  const others = living.filter((p) => !isMine(p));
   const chart = h('canvas', { class: 'chart big' });
   const S = PARAMS.score;
   root.append(
@@ -38,14 +39,14 @@ export function renderPopulations(root, world, progression, ghostSource, actions
         h('h3', {}, 'Progression'),
         h('div', { class: 'stat-row' },
           stat('Points disponibles', fmt(progression.points, 1)),
-          stat('Points gagnés au total', fmt(progression.p.totalEarned, 1)),
+          stat('Points gagnés au total', fmt(progression.totalEarned, 1)),
           stat('Populations lancées', progression.p.launched),
           stat('Populations vivantes', mine.length)),
-        h('p', { class: 'small muted' }, `Toutes les ${S.interval} s, chaque population vivante rapporte ${S.sizeWeight} × √(effectif) × (1 + ${S.diversityWeight} × nombre de ressources exploitées) points, plus ${S.generationBonus} point par tranche de 5 générations atteinte. Survivre longtemps, être nombreux, exploiter des ressources variées et évoluer sont donc récompensés.`)),
+        h('p', { class: 'small muted' }, `Toutes les ${S.interval} s, chaque population vivante rapporte ${S.sizeWeight} × √(effectif) × (1 + ${S.diversityWeight} × nombre de ressources exploitées) points, plus ${S.generationBonus} point par tranche de 5 générations atteinte. Survivre longtemps, être nombreux, exploiter des ressources variées et évoluer sont donc récompensés. Vos points ne descendent jamais sous ${PARAMS.game.pointsFloor} : vous pouvez toujours relancer une conception simple.`)),
       h('section', { class: 'card' },
-        h('h3', {}, 'Autres utilisateurs (simulés)'),
-        h('p', { class: 'small muted' }, 'Ces « joueurs » sont générés localement par une GhostWorldSource ; un vrai serveur pourra les remplacer.'),
-        h('div', { class: 'users' }, ghostSource.users().map((u) => h('div', { class: 'user' },
+        h('h3', {}, identity.multiplayer ? 'Joueurs du monde partagé' : 'Autres utilisateurs (simulés)'),
+        h('p', { class: 'small muted' }, identity.multiplayer ? 'Vrais joueurs connectés au serveur, plus quelques populations fantômes pour animer le monde.' : 'Ces « joueurs » sont générés localement (mode solo). Lancez « npm run multi » pour jouer à plusieurs.'),
+        h('div', { class: 'users' }, ghostSource.users().filter((u) => u.id !== identity.id).map((u) => h('div', { class: 'user' },
           h('span', { class: `dot ${u.online ? 'on' : 'off'}` }), h('b', {}, u.name), h('span', { class: 'muted small' }, ` · ${u.profile} · ${u.online ? 'en ligne' : 'hors ligne'}`)))))),
     h('section', { class: 'card' }, h('h3', {}, 'Effectifs dans le temps'), chart),
     h('section', { class: 'card' }, h('h3', {}, `Vos populations (${mine.length})`), popTable(mine, world, actions, true)),
@@ -73,7 +74,7 @@ function popTable(pops, world, actions, mine) {
 export function renderArchives(root, world, progression) {
   clear(root);
   const arch = progression.p.archives;
-  const others = [...world.populations.values()].filter((p) => p.extinct && p.ownerId !== 'joueur').sort((a, b) => b.extinctAt - a.extinctAt).slice(0, 20);
+  const others = [...world.populations.values()].filter((p) => p.extinct && !isMine(p)).sort((a, b) => b.extinctAt - a.extinctAt).slice(0, 20);
   root.append(h('section', { class: 'card' }, h('h3', {}, `Vos populations éteintes (${arch.length})`),
     arch.length ? h('div', { class: 'archive-grid' }, arch.map((a) => archiveCard(a))) : h('div', { class: 'muted small' }, 'Aucune pour le moment.')));
   root.append(h('section', { class: 'card' }, h('h3', {}, 'Extinctions récentes chez les autres'),

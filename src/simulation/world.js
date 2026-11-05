@@ -5,7 +5,7 @@ import { EnzymeRegistry } from './registry.js';
 import { Environment, ENV_METS } from './environment.js';
 import { SpatialHash } from './spatial.js';
 import { normalizeDesign, computePhenotype, mutateDesign } from './genome.js';
-import { metabolize, releaseContents, NMET, MI, CAUSES, newDamage } from './metabolism.js';
+import { metabolize, releaseContents, transferToEater, NMET, MI, CAUSES, newDamage } from './metabolism.js';
 import { Population } from './population.js';
 
 const P = PARAMS, Cp = P.cell, IP = P.interactions;
@@ -257,11 +257,7 @@ export class World {
     const pop = this.populations.get(c.popId);
     pop.recordDeath(cause);
     if (eater) {
-      const p = c.pools, q = eater.pools;
-      q[MI.phagosome] += p[MI.biomass] + p[MI.phagosome];
-      p[MI.biomass] = 0; p[MI.phagosome] = 0;
-      for (const id of ENV_METS) { q[MI[id]] += p[MI[id]]; p[MI[id]] = 0; }
-      q[MI.reserve] += p[MI.reserve]; p[MI.reserve] = 0;
+      transferToEater(c, eater);
       const ep = this.populations.get(eater.popId);
       ep.prey++; ep.kills++;
     } else releaseContents(c, this.env);

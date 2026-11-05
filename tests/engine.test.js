@@ -190,3 +190,61 @@ test('atelier : la coopérativité (Hill) rend la réponse sigmoïde', () => {
   assert.equal(sub(mm.id).hill, 1);
   assert.equal(sub(hill.id).hill, 2);
 });
+
+import { buildWall, buildMembraneProtein } from '../src/simulation/envelopeDesign.js';
+import { Progression, newProfile } from '../src/game/progression.js';
+
+test('enzymes lytiques : le lysozyme fait éclater le peptidoglycane mais pas la couche S', () => {
+  const uniform = { ...RICH };
+  const run = (wallType) => {
+    const w = new World({ seed: 12, env: { gw: 6, gh: 6, uniform } });
+    const killer = { ...defaultDesign(), name: 'tueur', envelope: { ...defaultDesign().envelope, wallType: 'slayer' }, enzymes: { ...defaultDesign().enzymes, lysozyme: 3 } };
+    const victim = { ...defaultDesign(), name: 'victime', envelope: { ...defaultDesign().envelope, wallType } };
+    w.addPopulation(killer, { count: 15, x: 30, y: 30, ownerId: 'a' });
+    const v = w.addPopulation(victim, { count: 15, x: 30, y: 30, ownerId: 'b' });
+    for (let i = 0; i < 600; i++) w.step();
+    return v;
+  };
+  const pepti = run('peptidoglycane'), slayer = run('slayer');
+  assert.ok((pepti.deathCauses.lysis || 0) > 0, 'le peptidoglycane devrait être lysé');
+  assert.equal(slayer.deathCauses.lysis || 0, 0, 'la couche S est insensible au lysozyme');
+});
+
+test('atelier d\'enveloppe : paroi et protéines cohérentes', () => {
+  const a = buildWall({ base: 'peptidoglycane', modifications: ['acetylation', 'lps'] });
+  assert.ok(a.ok); assert.equal(a.def.lytic, null); assert.ok(a.def.toxin > 0.5);
+  assert.equal(buildWall({ base: 'cellulose', modifications: ['lps'] }).ok, false, 'membrane externe réservée aux procaryotes');
+  assert.equal(buildMembraneProtein({ mechanism: 'symport', met: 'protein' }).ok, false, 'un polymère ne traverse pas');
+  const pump = buildMembraneProtein({ mechanism: 'abc_out', met: 'toxin' });
+  assert.ok(pump.ok && pump.def.kind === 'efflux');
+  // une pompe d'efflux réduit la toxine interne
+  const tox = { ...RICH, toxin: 20 };
+  const internal = (mp) => {
+    const w = new World({ seed: 3, env: { gw: 6, gh: 6, uniform: tox } });
+    w.addPopulation({ ...defaultDesign(), membraneProteins: mp }, { count: 1, x: 30, y: 30 });
+    for (let i = 0; i < 30; i++) w.step();
+    return w.cells[0].pools[MI.toxin];
+  };
+  assert.ok(internal({ e_toxin: 3 }) < internal({}) * 0.8);
+});
+
+test('progression : les points ne descendent jamais sous le plancher', () => {
+  const pr = new Progression({ ...newProfile(), points: 60 });
+  assert.ok(pr.spend(defaultDesign()));
+  assert.equal(pr.points, 50);
+  assert.ok(pr.canLaunch(defaultDesign()), 'une conception simple reste toujours lançable');
+  assert.equal(new Progression({ ...newProfile(), points: 3 }).points, 50);
+});
+
+import { sanitizeDesign } from '../src/simulation/sanitize.js';
+
+test('multijoueur : une enzyme trafiquée est reconstruite à partir de ses briques', () => {
+  const ok = buildEnzyme({ name: 'LDH', substrates: { pyruvate: 1, nadh: 1 }, products: { lactate: 1, nad: 1 }, domains: ['nad'] }).def;
+  const cheat = { ...ok, kcat: 1000, cost: { synth: 0, upkeep: 0, volume: 0 } };
+  const d = sanitizeDesign({ ...defaultDesign(), enzymes: { [ok.id]: 1 }, customEnzymes: [cheat] }, 'j_test01');
+  const e = d.customEnzymes[0];
+  assert.equal(e.kcat, ok.kcat, 'le kcat trafiqué est ignoré');
+  assert.ok(e.cost.synth > 0);
+  assert.ok(e.id.startsWith('j_test01:') && d.enzymes[e.id] === 1, 'identifiant préfixé par le joueur');
+  assert.throws(() => sanitizeDesign({ ...defaultDesign(), enzymes: { x: 1 }, customEnzymes: [{ id: 'x', name: 'magique', substrates: { co2: 1 }, products: { glucose: 1 }, bricks: {} }] }, 'j_test01'));
+});

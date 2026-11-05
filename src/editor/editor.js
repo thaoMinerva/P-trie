@@ -1,6 +1,6 @@
 // Éditeur de cellule en étapes guidées : base → forme → enveloppe → organites → enzymes → test et lancement.
 // L'aperçu et le résumé de viabilité restent visibles dans une colonne latérale.
-import { ORGANELLES, ENVELOPE, ENZYMES, ARCHETYPES, PARAMS } from '../data/index.js';
+import { ORGANELLES, ENVELOPE, ENZYMES, ARCHETYPES, PARAMS, WALLS, MPROT, MEMBRANE_PROTEINS } from '../data/index.js';
 import { SHAPES, computeGeometry } from '../simulation/geometry.js';
 import { normalizeDesign, defaultDesign } from '../simulation/genome.js';
 import { EnzymeRegistry } from '../simulation/registry.js';
@@ -33,6 +33,10 @@ const KITS = [
   { name: 'Réserves', desc: 'Stocke le glucose en excès, le ressort en disette ou la nuit.', enzymes: { glycogene_synthase: 0.8, phosphorylase: 0.8 } },
   { name: 'Recyclage des déchets', desc: 'Se nourrit du lactate, de l\'éthanol et de l\'acétate des voisins.', enzymes: { lactate_oxydase: 1, ethanol_oxydation: 1, acetate_krebs: 1 } },
   { name: 'Guerre chimique', desc: 'Sécrète une toxine… et s\'en protège.', enzymes: { toxine_synthase: 0.8, detoxifiase: 2 } },
+  { name: 'Recycleur d\'ADN/ARN', desc: 'Digère les acides nucléiques des cadavres : phosphore, azote et carbone.', enzymes: { adnase: 1, arnase: 1, nucleotidase: 1.2 } },
+  { name: 'Croissance boostée (ARN)', desc: 'ARN polymérase + synthèse de nucléotides : ribosomes jusqu\'à +60 %.', enzymes: { arn_polymerase: 1, synthese_nucleotides: 0.8 } },
+  { name: 'Réparation de l\'ADN', desc: 'ADN polymérase : répare les dommages jusqu\'à 3× plus vite.', enzymes: { adn_polymerase: 0.8, synthese_nucleotides: 0.6 } },
+  { name: 'Lyse des bactéries', desc: 'Lysozyme sécrété : fait éclater les parois de peptidoglycane voisines.', enzymes: { lysozyme: 1 } },
 ];
 
 export class Editor {
@@ -158,17 +162,48 @@ export class Editor {
 
   step_enveloppe(d) {
     const motOpts = Object.entries(ENVELOPE.motility).filter(([, m]) => m.types.includes(d.type));
-    return card('Enveloppe et mobilité',
-      intro('L\'enveloppe protège (prédateurs, osmose, toxines) mais ralentit les échanges et coûte de la biomasse. La mobilité permet de remonter les gradients de nourriture, au prix d\'ATP.'),
-      slider('Épaisseur de paroi', d.envelope.wall, 0, 1, 0.01, (v) => { d.envelope.wall = v; this.change(); }, (v) => v ? fmt(v, 2) : 'aucune'),
-      h('p', { class: 'small muted' }, ENVELOPE.wall.description + (d.type === 'eucaryote' ? ' Au-delà de 0,08, la phagocytose devient impossible.' : '')),
-      h('div', { class: 'choice-grid' },
-        toggleCard(d.envelope.capsule, 'Capsule', ENVELOPE.capsule.description, (v) => { d.envelope.capsule = v; this.change(true); }),
-        toggleCard(d.envelope.parasite, 'Suçoir (parasitisme)', ENVELOPE.parasite.description, (v) => { d.envelope.parasite = v; this.change(true); }),
-        toggleCard(d.envelope.adhesins, 'Adhésines symbiotiques', ENVELOPE.adhesins.description, (v) => { d.envelope.adhesins = v; this.change(true); })),
-      h('h4', {}, 'Mobilité'),
-      h('div', { class: 'choice-grid' }, motOpts.map(([k, m]) => choice(d.envelope.motility === k, m.name, m.description || 'Se laisse porter par l\'agitation moléculaire. Gratuit.', () => { d.envelope.motility = k; d.envelope.motilityUnits = 1; this.change(true); }))),
-      d.envelope.motility !== 'aucune' ? slider('Nombre / densité', d.envelope.motilityUnits, 1, ENVELOPE.motility[d.envelope.motility].maxUnits, 1, (v) => { d.envelope.motilityUnits = v; this.change(); }, (v) => `${v}`) : null);
+    const libW = new Set(this.ctx.progression.p.customWalls.map((e) => e.def.id));
+    const walls = Object.values(WALLS).filter((w) => w.types.includes(d.type) && (!w.custom || libW.has(w.id) || w.id === d.envelope.wallType));
+    const libP = new Set(this.ctx.progression.p.customProteins.map((e) => e.def.id));
+    const prots = Object.values(MPROT).filter((m) => !m.custom || libP.has(m.id) || d.membraneProteins?.[m.id] !== undefined);
+    const ph = this.analysis?.ph;
+    const memFrac = ph ? ph.membraneUsed : 0;
+    return h('div', { class: 'stack' },
+      card('Paroi',
+        intro('La paroi protège (prédateurs, osmose, toxines) mais ralentit les échanges et coûte de la biomasse. Son matériau décide aussi quelles enzymes lytiques peuvent la détruire. Créez vos propres parois dans l\'Atelier d\'enveloppe.'),
+        slider('Épaisseur de paroi', d.envelope.wall, 0, 1, 0.01, (v) => { d.envelope.wall = v; this.change(); }, (v) => v ? fmt(v, 2) : 'aucune'),
+        d.type === 'eucaryote' ? h('p', { class: 'small muted' }, 'Au-delà de 0,08, la phagocytose devient impossible.') : null,
+        h('div', { class: 'choice-grid' }, walls.map((w) => choice(d.envelope.wallType === w.id, w.name + (w.custom ? ' (perso)' : ''),
+          `${w.description} — prédation ${Math.round(w.predation * 100)} %, osmose ${Math.round(w.osmo * 100)} %, toxines ${Math.round(w.toxin * 100)} %${w.lytic ? '' : ', insensible aux enzymes lytiques'}`, () => {
+            d.envelope.wallType = w.id;
+            d.customWalls = w.custom ? [JSON.parse(JSON.stringify(w))] : [];
+            this.change(true);
+          }))),
+        h('div', { class: 'choice-grid' },
+          toggleCard(d.envelope.capsule, 'Capsule', ENVELOPE.capsule.description, (v) => { d.envelope.capsule = v; this.change(true); }),
+          toggleCard(d.envelope.parasite, 'Suçoir (parasitisme)', ENVELOPE.parasite.description, (v) => { d.envelope.parasite = v; this.change(true); }),
+          toggleCard(d.envelope.adhesins, 'Adhésines symbiotiques', ENVELOPE.adhesins.description, (v) => { d.envelope.adhesins = v; this.change(true); }))),
+      card('Protéines membranaires',
+        intro('Transporteurs (capturent mieux un nutriment), pompes d\'efflux (expulsent toxines ou déchets contre de l\'ATP), porines (accélèrent les échanges passifs). Elles occupent la surface de la membrane.'),
+        h('div', { class: 'bar' }, h('span', { class: 'bar-label' }, 'Membrane'), h('span', { class: 'bar-track' }, h('span', { class: 'bar-fill', style: { width: `${Math.min(1, memFrac) * 100}%`, background: memFrac > 1 ? '#e63946' : memFrac > 0.8 ? '#f8961e' : '#43aa8b' } })), h('span', { class: 'bar-val' }, `${Math.round(memFrac * 100)} / 100 %`)),
+        prots.map((m) => {
+          const on = d.membraneProteins?.[m.id] !== undefined;
+          const r = h('div', { class: `enz-row ${on ? 'on' : ''}` },
+            h('label', { class: 'enz-label' }, h('input', { type: 'checkbox', checked: on, onchange: (ev) => {
+              d.membraneProteins = d.membraneProteins || {};
+              if (ev.target.checked) { d.membraneProteins[m.id] = 1; if (m.custom) d.customMembraneProteins = [...(d.customMembraneProteins || []).filter((x) => x.id !== m.id), JSON.parse(JSON.stringify(m))]; }
+              else delete d.membraneProteins[m.id];
+              this.change(true);
+            } }), h('span', {}, h('b', {}, m.name), h('small', { class: 'tag' }, m.kind), m.custom ? h('small', { class: 'tag custom' }, 'perso') : null, h('div', { class: 'small muted' }, m.description))));
+          if (on) {
+            const val = h('span', { class: 'val' }, fmt(d.membraneProteins[m.id], 2));
+            r.append(h('div', { class: 'enz-slider' }, h('span', { class: 'small muted' }, 'densité'), h('input', { type: 'range', min: 0.1, max: 5, step: 0.05, value: d.membraneProteins[m.id], oninput: (ev) => { d.membraneProteins[m.id] = +ev.target.value; val.textContent = fmt(+ev.target.value, 2); this.change(); } }), val));
+          }
+          return r;
+        })),
+      card('Mobilité',
+        h('div', { class: 'choice-grid' }, motOpts.map(([k, m]) => choice(d.envelope.motility === k, m.name, m.description || 'Se laisse porter par l\'agitation moléculaire. Gratuit.', () => { d.envelope.motility = k; d.envelope.motilityUnits = 1; this.change(true); }))),
+        d.envelope.motility !== 'aucune' ? slider('Nombre / densité', d.envelope.motilityUnits, 1, ENVELOPE.motility[d.envelope.motility].maxUnits, 1, (v) => { d.envelope.motilityUnits = v; this.change(); }, (v) => `${v}`) : null));
   }
 
   organelleList() {

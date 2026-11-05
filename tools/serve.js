@@ -1,4 +1,5 @@
-// Serveur statique minimal (aucune dépendance) : node tools/serve.js [port]
+// Serveur statique minimal pour le mode SOLO (aucune dépendance) : node tools/serve.js [port]
+// Pour le multijoueur : npm run multi (server/server.js).
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
@@ -12,6 +13,7 @@ const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 http.createServer(async (req, res) => {
   try {
     let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    if (p === '/api/info') { res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"multiplayer":false}'); return; } // mode solo
     if (p.endsWith('/')) p += 'index.html';
     const file = normalize(join(root, p));
     if (file !== root && !file.startsWith(root + sep)) { res.writeHead(403).end(); return; }

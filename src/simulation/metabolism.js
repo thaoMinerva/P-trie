@@ -22,9 +22,12 @@ export const CAUSES = {
   ph: 'pH extrême',
   predation: 'prédation (phagocytose)',
   age: 'sénescence',
+  lysis: 'lyse de la paroi (enzymes lytiques)',
 };
+const DEAD = METABOLITES.map((m) => (m.dead ? I[m.dead] : -1));
+const HAS_MATTER = METABOLITES.map((m) => Object.keys(m.elements).some((k) => k !== 'Nic'));
 
-export const DMG_KEYS = ['starvation', 'toxin', 'ros', 'ethanol', 'osmo_hypo', 'osmo_hyper', 'heat', 'cold', 'ph'];
+export const DMG_KEYS = ['starvation', 'toxin', 'ros', 'ethanol', 'osmo_hypo', 'osmo_hyper', 'heat', 'cold', 'ph', 'lysis'];
 const D = Object.fromEntries(DMG_KEYS.map((k, i) => [k, i]));
 export function newDamage() { return new Float64Array(DMG_KEYS.length); }
 function addDamage(cell, cause, amount) {
@@ -51,13 +54,13 @@ export function metabolize(cell, env, dt, stats) {
     const cEnv = f[g] / gv, cInt = p[m.i] / V;
     let flux;
     if (m.transport === 'actif') {
-      flux = m.perm * SA * ex * (cell.host === null ? ph.activeUptake : 1) * (cEnv / (m.kt + cEnv)) * Math.max(0, 1 - cInt / C.maxInternalConc) * dt;
+      flux = m.perm * ph.permMul[m.i] * SA * ex * (cell.host === null ? ph.activeUptake : 1) * (cEnv / (m.kt + cEnv)) * Math.max(0, 1 - cInt / C.maxInternalConc) * dt;
       flux = Math.min(flux, f[g] * 0.3);
       const cost = flux * C.activeTransportCost;
       if (cost > p[I.atp]) flux = p[I.atp] / C.activeTransportCost;
       p[I.atp] -= flux * C.activeTransportCost;
     } else {
-      let perm = m.perm;
+      let perm = m.perm * ph.permMul[m.i] * ph.passiveMul;
       if (m.i === I.toxin) perm *= (1 - ph.toxinProtect);
       // flux passif borné à une demi-équilibration par pas (stabilité numérique)
       const kEq = V * gv / (V + gv);
@@ -66,6 +69,14 @@ export function metabolize(cell, env, dt, stats) {
       else flux = Math.max(flux, -p[m.i] * 0.5);
     }
     f[g] -= flux; p[m.i] += flux;
+  }
+
+  // Pompes d'efflux (ATP)
+  for (let k = 0; k < ph.effluxes.length; k++) {
+    const ef = ph.effluxes[k];
+    let amt = Math.min(p[ef.i] * 0.5, ef.rate * SA * (p[ef.i] / V) * dt);
+    if (amt * ef.atp > p[I.atp]) amt = p[I.atp] / ef.atp;
+    if (amt > 0) { p[ef.i] -= amt; fields[ef.i][g] += amt; p[I.atp] -= amt * ef.atp; }
   }
 
   // ---------- 2. Réactions enzymatiques ----------
@@ -101,6 +112,7 @@ export function metabolize(cell, env, dt, stats) {
       if (v * sub.n > avail * 0.9) v = (avail * 0.9) / sub.n;
     }
     if (v <= 1e-12) continue;
+    if (e.lytic) { env.lytic[e.lytic][g] += v / dt; if (!e.subs.length) { env.secreted[g] += v / dt; continue; } } // enzyme lytique : attaque les parois voisines
     for (let s = 0; s < e.subs.length; s++) {
       const sub = e.subs[s];
       if (sub.i < 0) { stats.light += v * sub.n; continue; }
@@ -130,7 +142,8 @@ export function metabolize(cell, env, dt, stats) {
   // ---------- 4. Synthèse protéique (ribosomes → biomasse) ----------
   if (p[I.biomass] < ph.B0 * 2.05) {
     const aaC = p[I.aa] / V, atpC = p[I.atp] / V, pC = p[I.phosphate] / V;
-    let v = C.ribosomeRate * ph.ribosomes * ph.proteinBoost * V
+    const arnC = p[I.arn_cell] / V;
+    let v = C.ribosomeRate * ph.ribosomes * ph.proteinBoost * (1 + 0.6 * arnC / (0.03 + arnC)) * V
       * (aaC / (C.riboKmAa + aaC)) * (atpC / (C.riboKmAtp + atpC)) * (pC / (C.riboKmP + pC)) * dt;
     v = Math.min(v, p[I.aa] * 0.9, p[I.atp] * 0.9 / C.atpPerBiomass, p[I.phosphate] * 0.9 / C.pPerBiomass);
     if (v > 0) {
@@ -138,6 +151,10 @@ export function metabolize(cell, env, dt, stats) {
       cell.growth = v / dt;
     } else cell.growth = 0;
   } else cell.growth = 0;
+
+  // Renouvellement des acides nucléiques (ARN instable, ADN de réparation lentement recyclé)
+  if (p[I.arn_cell] > 0) { const d = p[I.arn_cell] * 0.02 * dt; p[I.arn_cell] -= d; p[I.nucleotide] += d; }
+  if (p[I.adn_cell] > 0) { const d = p[I.adn_cell] * 0.005 * dt; p[I.adn_cell] -= d; p[I.nucleotide] += d; }
 
   // ---------- 5. Entretien ----------
   let cost = ph.upkeep * dt;
@@ -155,7 +172,12 @@ export function metabolize(cell, env, dt, stats) {
   // ROS
   p[I.ros] -= p[I.ros] * (C.rosDecay + ph.rosDetox) * dt;
   const ros = p[I.ros] / V;
-  if (ros > C.rosThreshold) addDamage(cell, 'ros', (ros - C.rosThreshold) * C.rosDamage * dt);
+  if (ros > C.rosThreshold) addDamage(cell, 'ros', (ros - C.rosThreshold) * C.rosDamage * (1 - ph.rosProtect) * dt);
+  // Enzymes lytiques du voisinage qui ciblent notre paroi
+  if (ph.lyticTarget) {
+    const a = env.lytic[ph.lyticTarget][g];
+    if (a > 1e-4) addDamage(cell, 'lysis', a * C.lysisDamage / (0.2 + ph.wall) * (cell.genome.envelope.capsule ? 0.7 : 1) * dt);
+  }
   const tox = p[I.toxin] / V;
   if (tox > C.toxinThreshold) addDamage(cell, 'toxin', (tox - C.toxinThreshold) * C.toxinDamage * 100 * dt);
   const eth = p[I.ethanol] / V;
@@ -176,7 +198,8 @@ export function metabolize(cell, env, dt, stats) {
   if (dpHc > 0) addDamage(cell, 'ph', dpHc * C.pHDamage * dt);
   // Réparation
   if (cell.damage > 0) {
-    const r = Math.min(cell.damage, C.repairRate * dt);
+    const adnC = p[I.adn_cell] / V;
+    const r = Math.min(cell.damage, C.repairRate * (1 + 2 * adnC / (0.02 + adnC)) * dt);
     const rc = r * C.repairCost * V;
     if (p[I.atp] > rc) {
       p[I.atp] -= rc; cell.damage -= r;
@@ -204,8 +227,22 @@ export function releaseContents(cell, env) {
     const v = p[i];
     if (v <= 0) continue;
     if (ENV_IDX[i]) f[i][g] += v;
-    else if (i === I.biomass || i === I.phagosome) { f[I.protein][g] += v; f[I.phosphate][g] += v * C.pPerBiomass; }
-    else if (i === I.reserve) f[I.starch][g] += v;
+    else if (i === I.biomass || i === I.phagosome) {
+      // biomasse C3N1P0,1 → protéines + acides nucléiques + phosphate + CO2 (bilan exact)
+      f[I.protein][g] += v * 0.88; f[I.adn][g] += v * 0.02; f[I.arn][g] += v * 0.04;
+      f[I.phosphate][g] += v * 0.04; f[I.co2][g] += v * 0.06;
+    } else if (DEAD[i] >= 0) f[DEAD[i]][g] += v;
+    p[i] = 0;
+  }
+}
+
+/** Transfère la matière d'une proie vers son prédateur (la biomasse part au phagosome). */
+export function transferToEater(prey, eater) {
+  const p = prey.pools, q = eater.pools;
+  for (let i = 0; i < NMET; i++) {
+    if (p[i] <= 0) continue;
+    if (i === I.biomass || i === I.phagosome) q[I.phagosome] += p[i];
+    else if (HAS_MATTER[i]) q[i] += p[i];
     p[i] = 0;
   }
 }

@@ -149,7 +149,7 @@ export class WorldView {
   }
 
   cellColor(c, pop) {
-    const hue = Math.round((c.genome.hue || 0) / 3) * 3;
+    const hue = Math.round((c.hue ?? c.genome.hue ?? 0) / 3) * 3;
     const key = pop.id + ':' + hue;
     let col = this.colorCache.get(key);
     if (!col) {

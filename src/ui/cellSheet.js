@@ -31,7 +31,7 @@ export function renderCellSheet(cell, world, actions = {}) {
     h('div', { class: 'kv' },
       kv('Forme', `${SHAPES[g.shape.kind]} · ${fmt(g.shape.size, 2)} µm`),
       kv('Volume / surface', `${fmt(V, 1)} µm³ · S/V ${fmt(ph.sv, 2)} µm⁻¹`),
-      kv('Enveloppe', [g.envelope.wall > 0 ? `paroi ${fmt(g.envelope.wall, 2)}` : 'membrane seule', g.envelope.capsule ? 'capsule' : null, ENVELOPE.motility[g.envelope.motility].name + (g.envelope.motilityUnits > 1 ? ` ×${g.envelope.motilityUnits}` : ''), g.envelope.parasite ? 'suçoir' : null, g.envelope.adhesins ? 'adhésines' : null].filter(Boolean).join(', ')),
+      kv('Enveloppe', [g.envelope.wall > 0 ? `paroi ${ph.wallName || ''} ${fmt(g.envelope.wall, 2)}` : 'membrane seule', g.envelope.capsule ? 'capsule' : null, ENVELOPE.motility[g.envelope.motility].name + (g.envelope.motilityUnits > 1 ? ` ×${g.envelope.motilityUnits}` : ''), g.envelope.parasite ? 'suçoir' : null, g.envelope.adhesins ? 'adhésines' : null].filter(Boolean).join(', ')),
       kv('Organites', Object.entries(g.organelles).map(([id, n]) => `${ORG[id].name}${n > 1 ? ' ×' + n : ''}`).join(', ')),
       kv('Âge · phase', `${fmt(cell.age, 0)} s · ${PHASES[cell.phase] || cell.phase}`)),
     h('h4', {}, 'Enzymes (concentration)'),
@@ -44,6 +44,9 @@ export function renderCellSheet(cell, world, actions = {}) {
     bar('Glucose', conc('glucose') / 1, '#f2c14e', fmt(conc('glucose'), 3)),
     bar('Acides aminés', conc('aa') / 1, '#9b5de5', fmt(conc('aa'), 3)),
     bar('Pyruvate', conc('pyruvate') / 1, '#e5989b', fmt(conc('pyruvate'), 3)),
+    p[MI.arn_cell] > 0.001 ? bar('ARN cellulaire', conc('arn_cell') / 0.1, '#fee440', fmt(conc('arn_cell'), 3)) : null,
+    p[MI.adn_cell] > 0.001 ? bar('ADN de réparation', conc('adn_cell') / 0.05, '#f15bb5', fmt(conc('adn_cell'), 3)) : null,
+    Object.keys(g.membraneProteins || {}).length ? h('div', { class: 'small muted' }, 'Protéines membranaires : ' + Object.entries(g.membraneProteins).map(([id, c]) => `${id.split(':').pop()} ${fmt(c, 2)}`).join(', ')) : null,
     p[MI.phagosome] > 0 ? bar('Proies digérées', p[MI.phagosome] / ph.B0, '#ef476f', fmt(p[MI.phagosome], 1)) : null,
     conc('toxin') > 0.0005 ? bar('Toxine', conc('toxin') / 0.01, '#d00000', fmt(conc('toxin'), 4)) : null,
     bar('Dommages', cell.damage, '#e63946', `${fmt(cell.damage * 100, 0)} %`),
@@ -56,11 +59,15 @@ export function renderCellSheet(cell, world, actions = {}) {
       ph.phagocyte ? '🍽️ Phagocyte. ' : '',
     ].join('') || 'Aucune.'),
     h('h4', {}, 'Milieu local'),
-    h('div', { class: 'kv' },
-      kv('Température · pH', `${fmt(env.temperature[gi], 1)} °C · pH ${fmt(env.pH[gi], 2)}`),
-      kv('Lumière · salinité', `${fmt(env.lightAt(gi) * 100, 0)} % · ${fmt(env.salinity[gi], 2)}`),
-      kv('O₂ · glucose', `${fmt(env.fields[MET.o2.index][gi], 2)} · ${fmt(env.fields[MET.glucose.index][gi], 2)} u`),
-      kv('NH₄⁺ · protéines', `${fmt(env.fields[MET.nh4.index][gi], 2)} · ${fmt(env.fields[MET.protein.index][gi], 2)} u`)));
+    (() => {
+      const L = cell.local || { T: env.temperature[gi], pH: env.pH[gi], light: env.lightAt(gi), salinity: env.salinity[gi],
+        o2: env.fields[MET.o2.index][gi], glucose: env.fields[MET.glucose.index][gi], nh4: env.fields[MET.nh4.index][gi], protein: env.fields[MET.protein.index][gi] };
+      return h('div', { class: 'kv' },
+        kv('Température · pH', `${fmt(L.T, 1)} °C · pH ${fmt(L.pH, 2)}`),
+        kv('Lumière · salinité', `${fmt(L.light * 100, 0)} % · ${fmt(L.salinity, 2)}`),
+        kv('O₂ · glucose', `${fmt(L.o2, 2)} · ${fmt(L.glucose, 2)} u`),
+        kv('NH₄⁺ · protéines', `${fmt(L.nh4, 2)} · ${fmt(L.protein, 2)} u`));
+    })());
 }
 
 function kv(k, v) { return h('div', { class: 'kv-row' }, h('span', { class: 'k' }, k), h('span', { class: 'v' }, v)); }

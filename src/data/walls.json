@@ -1,0 +1,24 @@
+{
+  "_doc": "Matériaux de paroi. predation / osmo / toxin : protection maximale (à épaisseur 1). exchangePenalty : ralentissement des échanges par unité d'épaisseur. mass : biomasse par µm² et par unité d'épaisseur. lytic : cible des enzymes lytiques (null = insensible).",
+  "materials": [
+    { "id": "peptidoglycane", "name": "Peptidoglycane", "types": ["procaryote"], "predation": 0.85, "osmo": 0.95, "toxin": 0.5, "exchangePenalty": 1.2, "mass": 0.25, "lytic": "peptidoglycane", "color": "#e9d8a6",
+      "description": "Maille de sucres et de peptides des bactéries. Solide et légère, mais détruite par le lysozyme." },
+    { "id": "slayer", "name": "Couche S protéique", "types": ["procaryote", "eucaryote"], "predation": 0.6, "osmo": 0.6, "toxin": 0.3, "exchangePenalty": 0.5, "mass": 0.2, "lytic": "slayer", "color": "#bde0fe",
+      "description": "Pavage de protéines : laisse bien passer les nutriments, protège moyennement, digérée par les protéases." },
+    { "id": "cellulose", "name": "Cellulose", "types": ["eucaryote"], "predation": 0.8, "osmo": 1.0, "toxin": 0.4, "exchangePenalty": 1.0, "mass": 0.3, "lytic": "cellulose", "color": "#b7e4c7",
+      "description": "Paroi des algues vertes : excellente contre l'osmose, attaquée par les cellulases." },
+    { "id": "chitine", "name": "Chitine", "types": ["eucaryote"], "predation": 0.9, "osmo": 0.9, "toxin": 0.5, "exchangePenalty": 1.3, "mass": 0.3, "lytic": "chitine", "color": "#ddbea9",
+      "description": "Paroi des champignons et levures : très résistante, attaquée par les chitinases." },
+    { "id": "silice", "name": "Silice (frustule)", "types": ["eucaryote"], "predation": 1.0, "osmo": 1.0, "toxin": 0.6, "exchangePenalty": 1.6, "mass": 0.5, "lytic": null, "color": "#e0fbfc",
+      "description": "Coque de verre des diatomées : quasi invulnérable et insensible aux enzymes lytiques, mais lourde et peu perméable." }
+  ],
+  "default": { "procaryote": "peptidoglycane", "eucaryote": "cellulose" },
+  "modifications": [
+    { "id": "reticulation", "name": "Réticulation renforcée", "predationMul": 1.15, "osmoMul": 1.05, "exchangeMul": 1.3, "massMul": 1.2, "description": "Plus de liaisons croisées : plus solide, mais plus étanche et plus lourde." },
+    { "id": "teichoiques", "name": "Acides téichoïques", "osmoMul": 1.1, "toxinMul": 1.1, "massMul": 1.1, "types": ["procaryote"], "description": "Polymères chargés ancrés dans la paroi : rigidité et barrière contre les toxines." },
+    { "id": "lps", "name": "Membrane externe (lipopolysaccharides)", "toxinMul": 1.6, "exchangeMul": 1.25, "massMul": 1.25, "types": ["procaryote"], "description": "Seconde membrane des bactéries Gram négatif : excellente barrière chimique, mais filtre aussi les nutriments." },
+    { "id": "pores", "name": "Pores larges", "exchangeMul": 0.55, "toxinMul": 0.6, "predationMul": 0.9, "description": "Laisse passer les nutriments bien plus vite… et les toxines aussi." },
+    { "id": "acetylation", "name": "O-acétylation (anti-lytique)", "lyticImmune": true, "massMul": 1.15, "description": "Modification chimique qui rend la paroi insensible aux enzymes lytiques qui la ciblent." },
+    { "id": "melanine", "name": "Pigment protecteur (mélanine)", "toxinMul": 1.2, "rosProtect": 0.3, "massMul": 1.2, "description": "Absorbe une partie du stress oxydatif et des toxines." }
+  ]
+}

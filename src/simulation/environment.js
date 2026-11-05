@@ -21,6 +21,7 @@ export class Environment {
     this.pHBase = new Float32Array(this.n);
     this.pH = new Float32Array(this.n);
     this.secreted = new Float32Array(this.n); // activité des enzymes sécrétées (u/s, moyenne glissante) – non matériel
+    this.lytic = { peptidoglycane: new Float32Array(this.n), slayer: new Float32Array(this.n), cellulose: new Float32Array(this.n), chitine: new Float32Array(this.n) };
     this.lightDepth = new Float32Array(this.gh);
     this.patchTargets = {};
     this.lightLevel = 1;
@@ -157,6 +158,7 @@ export class Environment {
     }
     const sec = this.secreted;
     for (let i = 0; i < n; i++) sec[i] *= 0.97;
+    for (const k in this.lytic) { const L = this.lytic[k]; for (let i = 0; i < n; i++) L[i] *= 0.97; }
     if (tick % W.diffusionEvery === 0) {
       for (const id of ENV_METS) {
         const D = MET[id].diffusion * W.diffusionEvery;

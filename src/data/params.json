@@ -30,7 +30,7 @@
     "rosDecay": 0.05, "rosThreshold": 0.02, "rosDamage": 2.0,
     "toxinThreshold": 0.004, "toxinDamage": 6.0,
     "ethanolThreshold": 0.15, "ethanolDamage": 0.6,
-    "starvationDamage": 0.35,
+    "starvationDamage": 0.35, "lysisDamage": 0.02,
     "repairRate": 0.01, "repairCost": 0.05,
     "tempTolLow": 18, "tempTolHigh": 10, "tempDamage": 0.01,
     "pHTol": 2.2, "pHDamage": 0.05,
@@ -67,7 +67,7 @@
     "interval": 10, "sizeWeight": 0.08, "diversityWeight": 0.15, "generationBonus": 1.0, "pointsFactor": 1.0
   },
   "game": {
-    "startPoints": 150, "founders": 10, "launchBase": 30, "costPerEnzyme": 2, "costPerOrganelle": 1.5, "costEukaryote": 10, "costCustomEnzyme": 3,
+    "startPoints": 150, "pointsFloor": 50, "founders": 10, "launchBase": 30, "costPerEnzyme": 2, "costPerOrganelle": 1.5, "costEukaryote": 10, "costCustomEnzyme": 3,
     "ghostTarget": 5, "ghostSpawnInterval": 90, "ghostRetireProb": 0.002
   }
 }

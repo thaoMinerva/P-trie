@@ -16,6 +16,9 @@ export function analyzeDesign(design, registry) {
   if (ph.volUsed > 0.85) errors.push(`Volume dépassé : organites et enzymes occupent ${(ph.volUsed * 100).toFixed(0)} % du volume (max 85 %). Agrandissez la cellule ou retirez des éléments.`);
   else if (ph.volUsed > 0.7) warnings.push(`Cytoplasme encombré (${(ph.volUsed * 100).toFixed(0)} % du volume utilisé).`);
   if (!enz.length) errors.push('Aucune enzyme : la cellule ne peut rien métaboliser.');
+  if (ph.membraneUsed > 1) errors.push(`Membrane saturée : les protéines membranaires occupent ${(ph.membraneUsed * 100).toFixed(0)} % de la surface (max 100 %).`);
+  for (const e of enz) if (e.lytic && e.lytic === ph.lyticTarget) warnings.push(`${e.def.name} attaque votre propre paroi (${ph.wallName}) : changez de matériau ou ajoutez l'O-acétylation.`);
+  if (enz.some((e) => e.id === 'arn_polymerase' || e.id === 'adn_polymerase') && !consumes('adn') && !consumes('arn') && !produces('nucleotide') && !(d.membraneProteins?.t_nucleotide)) info.push('Les polymérases utilisent les nucléotides du milieu (issus de l\'ADN/ARN des cadavres) : une ADNase/ARNase ou la synthèse de nucléotides les rend plus efficaces.');
 
   // Carbone et énergie
   const photo = enz.some((e) => e.subs.some((s) => s.i < 0));

@@ -1,5 +1,5 @@
 // Dessin d'une cellule (partagé entre la vue du monde et l'éditeur).
-import { ORG } from '../data/index.js';
+import { ORG, WALLS } from '../data/index.js';
 import { RNG, hashString } from '../simulation/rng.js';
 
 export function pointInPolygon(x, y, pts) {
@@ -100,7 +100,7 @@ export function drawCellDetailed(ctx, { outline, design, scale, angle = 0, color
     ctx.fillStyle = '#ffd166';
     for (let i = 0; i < outline.length; i += 4) { const [x, y] = outline[i]; const [px, py] = tf(x * 1.07, y * 1.07); ctx.fillRect(px - 1, py - 1, 2.5, 2.5); }
   }
-  drawCellShape(ctx, outline, scale, angle, color, wall > 0 ? 'rgba(240,220,170,0.9)' : 'rgba(255,255,255,0.6)', wall > 0 ? Math.max(1.2, wall * scale * 0.18) : Math.max(1, scale * 0.03));
+  drawCellShape(ctx, outline, scale, angle, color, wall > 0 ? (WALLS[design.envelope.wallType]?.color || 'rgba(240,220,170,0.9)') : 'rgba(255,255,255,0.6)', wall > 0 ? Math.max(1.2, wall * scale * 0.18) : Math.max(1, scale * 0.03));
   // ribosomes
   const ribo = design.organelles.ribosomes || 0;
   if (ribo && scale > 25) {

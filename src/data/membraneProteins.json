@@ -1,0 +1,23 @@
+{
+  "_doc": "Protéines membranaires. Elles occupent la membrane plasmique (budget de surface : 100 %). area : surface occupée par unité de concentration. transporteur : multiplie la perméabilité d'un métabolite (permAdd × conc). efflux : expulse activement un métabolite interne (rate × conc, coût atpPerUnit). porine : facilite tous les échanges passifs. costs comme les enzymes (par unité de concentration et par µm³).",
+  "list": [
+    { "id": "t_glucose", "name": "Transporteur de glucose (PTS)", "kind": "transporteur", "met": "glucose", "permAdd": 0.5, "area": 0.12, "cost": { "synth": 0.012, "upkeep": 0.001 }, "description": "Pompe davantage de glucose : +50 % de capture par unité." },
+    { "id": "t_aa", "name": "Perméase des acides aminés", "kind": "transporteur", "met": "aa", "permAdd": 0.6, "area": 0.12, "cost": { "synth": 0.012, "upkeep": 0.001 }, "description": "Capture accrue des acides aminés (décomposeurs, prédateurs)." },
+    { "id": "t_nh4", "name": "Transporteur d'ammonium (Amt)", "kind": "transporteur", "met": "nh4", "permAdd": 0.6, "area": 0.1, "cost": { "synth": 0.01, "upkeep": 0.0008 }, "description": "Capture accrue de l'azote." },
+    { "id": "t_phosphate", "name": "Transporteur de phosphate (Pst)", "kind": "transporteur", "met": "phosphate", "permAdd": 0.8, "area": 0.1, "cost": { "synth": 0.01, "upkeep": 0.0008 }, "description": "Capture accrue du phosphate, souvent limitant." },
+    { "id": "t_nucleotide", "name": "Transporteur de nucléotides", "kind": "transporteur", "met": "nucleotide", "permAdd": 0.8, "area": 0.1, "cost": { "synth": 0.012, "upkeep": 0.001 }, "description": "Récupère les nucléotides libérés par l'ADNase et l'ARNase." },
+    { "id": "t_lactate", "name": "Transporteur de lactate", "kind": "transporteur", "met": "lactate", "permAdd": 1.0, "area": 0.1, "cost": { "synth": 0.01, "upkeep": 0.0008 }, "description": "Accélère l'échange de lactate (rejet par les fermenteurs, capture par les recycleurs)." },
+    { "id": "e_toxin", "name": "Pompe d'efflux des toxines (ABC)", "kind": "efflux", "met": "toxin", "rate": 0.4, "atpPerUnit": 1, "area": 0.15, "cost": { "synth": 0.02, "upkeep": 0.0015 }, "description": "Expulse les toxines contre 1 ATP par molécule : résistance aux prédateurs chimiques." },
+    { "id": "e_ethanol", "name": "Pompe d'efflux de l'éthanol", "kind": "efflux", "met": "ethanol", "rate": 0.4, "atpPerUnit": 0.5, "area": 0.12, "cost": { "synth": 0.015, "upkeep": 0.001 }, "description": "Limite l'intoxication des fermenteurs alcooliques." },
+    { "id": "porine", "name": "Porines", "kind": "porine", "passiveMul": 0.3, "area": 0.1, "cost": { "synth": 0.008, "upkeep": 0.0005 }, "description": "Canaux non sélectifs : +30 % sur tous les échanges passifs (gaz, déchets… et toxines)." }
+  ],
+  "workshop": {
+    "mechanisms": [
+      { "id": "uniport", "name": "Uniport (facilité, passif)", "kind": "transporteur", "permMul": 1.0, "costMul": 0.8, "description": "Suit le gradient : gratuit en énergie, mais ne concentre pas le métabolite." },
+      { "id": "symport", "name": "Symport H⁺ (actif secondaire)", "kind": "transporteur", "permMul": 1.3, "costMul": 1.0, "description": "Couplé au gradient de protons : concentre le métabolite à l'intérieur." },
+      { "id": "abc_in", "name": "Importeur ABC (ATP)", "kind": "transporteur", "permMul": 1.8, "costMul": 1.5, "description": "Consomme de l'ATP : capture très efficace même à très faible concentration." },
+      { "id": "abc_out", "name": "Pompe d'efflux ABC (ATP)", "kind": "efflux", "rateMul": 1.0, "costMul": 1.3, "description": "Expulse le métabolite hors de la cellule contre de l'ATP." }
+    ],
+    "basePerm": 0.6, "baseRate": 0.4, "baseArea": 0.12, "baseSynth": 0.012, "baseUpkeep": 0.001
+  }
+}

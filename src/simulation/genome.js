@@ -1,5 +1,6 @@
 // Génome (= conception d'un organisme) : normalisation, phénotype dérivé, mutations.
-import { PARAMS, ORG, ORGANELLES, ENVELOPE, MET } from '../data/index.js';
+import { PARAMS, ORG, ORGANELLES, ENVELOPE, MET, WALLS, MPROT, METABOLITES } from '../data/index.js';
+import { registerWall, registerMembraneProtein, defaultWallType } from './envelopeDesign.js';
 import { computeGeometry } from './geometry.js';
 import { registerOrganelle } from './organelleDesign.js';
 
@@ -32,6 +33,14 @@ export function normalizeDesign(d) {
   if (g.shape.kind !== 'libre') g.shape.points = null;
   const e = (g.envelope = Object.assign({ wall: 0, capsule: false, motility: 'aucune', motilityUnits: 0, parasite: false, adhesins: false }, g.envelope));
   e.wall = clamp(+e.wall || 0, 0, ENVELOPE.wall.maxThickness);
+  for (const cw of g.customWalls || []) registerWall(cw);
+  if (!WALLS[e.wallType] || !WALLS[e.wallType].types.includes(g.type)) e.wallType = defaultWallType(g.type);
+  g.customWalls = (g.customWalls || []).filter((cw) => cw.id === e.wallType);
+  for (const cp of g.customMembraneProteins || []) registerMembraneProtein(cp);
+  const mp = {};
+  for (const [id, c] of Object.entries(g.membraneProteins || {})) { const v = clamp(+c || 0, 0, 5); if (MPROT[id] && v > 0.01) mp[id] = +v.toFixed(3); }
+  g.membraneProteins = mp;
+  g.customMembraneProteins = (g.customMembraneProteins || []).filter((cp) => mp[cp.id] !== undefined);
   const mot = ENVELOPE.motility[e.motility];
   if (!mot || !mot.types.includes(g.type)) e.motility = 'aucune';
   e.motilityUnits = e.motility === 'aucune' ? 0 : clamp(Math.round(e.motilityUnits || 1), 1, ENVELOPE.motility[e.motility].maxUnits);
@@ -119,20 +128,36 @@ export function computePhenotype(design, registry) {
       id, def, conc, cap, loc, subs, prods, inhib, vmax: conc * def.kcat * cap * V,
       kcat: def.kcat, tOpt: def.tOpt, tWidth: def.tWidth, pHOpt: def.pHOpt, pHWidth: def.pHWidth,
       makesAtp: (def.products.atp || 0) > 0, regulation: def.regulation || null,
-      feedback: def.feedback ? mainProduct : null,
+      feedback: def.feedback ? mainProduct : null, lytic: def.lytic && def.location === 'secrete' ? def.lytic : null,
     });
     tSum += def.tOpt * conc; pHSum += def.pHOpt * conc; wSum += conc;
   }
 
   // Enveloppe
   const W = ENVELOPE.wall, CAP = ENVELOPE.capsule;
+  for (const cw of g.customWalls || []) registerWall(cw);
+  const M = WALLS[env.wallType] || WALLS[defaultWallType(g.type)];
   const wall = env.wall;
-  const exchange = 1 / (1 + wall * W.exchangePenalty) / (env.capsule ? 1 + CAP.exchangePenalty : 1);
-  const wallMass = wall * W.massPerThickness * SA;
+  const exchange = 1 / (1 + wall * M.exchangePenalty) / (env.capsule ? 1 + CAP.exchangePenalty : 1);
+  const wallMass = wall * M.mass * SA;
   const capsuleMass = env.capsule ? CAP.mass * SA : 0;
-  const predationProtect = 1 - (1 - Math.min(1, wall / W.maxThickness) * W.predationProtect) * (1 - (env.capsule ? CAP.predationProtect : 0));
-  const toxinProtect = 1 - (1 - Math.min(1, wall) * W.toxinProtect) * (1 - (env.capsule ? CAP.toxinProtect : 0));
-  const osmoProtect = Math.min(1, wall / 0.15) * W.osmoProtect;
+  const predationProtect = 1 - (1 - Math.min(1, wall / W.maxThickness) * M.predation) * (1 - (env.capsule ? CAP.predationProtect : 0));
+  const toxinProtect = 1 - (1 - Math.min(1, wall) * M.toxin) * (1 - (env.capsule ? CAP.toxinProtect : 0));
+  const osmoProtect = Math.min(1, wall / 0.15) * M.osmo;
+  // Protéines membranaires
+  const permMul = new Float64Array(METABOLITES.length).fill(1);
+  let passiveMul = 1, membraneUsed = 0;
+  const effluxes = [];
+  for (const cp of g.customMembraneProteins || []) registerMembraneProtein(cp);
+  for (const [id, conc] of Object.entries(g.membraneProteins || {})) {
+    const mp = MPROT[id]; if (!mp) continue;
+    membraneUsed += mp.area * conc;
+    massPerV += mp.cost.synth * conc;
+    upkeepPerV += mp.cost.upkeep * conc;
+    if (mp.kind === 'transporteur') permMul[MET[mp.met].index] += mp.permAdd * conc;
+    else if (mp.kind === 'porine') passiveMul += mp.passiveMul * conc;
+    else if (mp.kind === 'efflux') effluxes.push({ i: MET[mp.met].index, rate: mp.rate * conc, atp: mp.atpPerUnit });
+  }
   const mot = ENVELOPE.motility[env.motility];
   const speed = (mot.speedPerUnit || 0) * env.motilityUnits / (1 + 0.1 * Math.max(0, geo.radius - 1));
   const motilityCost = (mot.costPerSpeed || 0) * speed * Math.pow(V, 0.67);
@@ -153,6 +178,8 @@ export function computePhenotype(design, registry) {
     ribosomes: fx.ribosomes, proteinBoost: 1 + fx.proteinSynthesis,
     digestion: fx.digestion, osmoregulation: fx.osmoregulation, rosDetox: fx.rosDetox, hyperProtect: fx.hyperProtect,
     exchange, activeUptake: env.parasite ? 0.03 : 1, predationProtect, toxinProtect, osmoProtect, wall,
+    wallType: M.id, wallName: M.name, lyticTarget: wall > 0.02 ? M.lytic : null, rosProtect: wall > 0.02 ? (M.rosProtect || 0) : 0,
+    permMul, passiveMul, effluxes, membraneUsed,
     speed, motilityCost, motile: speed > 0,
     phagocyte: euk && phagocytosis && wall < W.phagocytosisBlock,
     autophagy: autophagy ? 2 : 1,
@@ -170,6 +197,10 @@ export function mutateDesign(design, rng) {
     g.enzymes[id] = +(g.enzymes[id] * Math.exp(rng.gauss() * M.concSigma)).toFixed(4);
     if (rng.chance(M.lossProb) || g.enzymes[id] < 0.05) delete g.enzymes[id];
     else if (g.enzymes[id] > 10) g.enzymes[id] = 10;
+  }
+  for (const id of Object.keys(g.membraneProteins || {})) {
+    g.membraneProteins[id] = +(g.membraneProteins[id] * Math.exp(rng.gauss() * M.concSigma)).toFixed(4);
+    if (g.membraneProteins[id] < 0.05) delete g.membraneProteins[id];
   }
   g.shape = { ...g.shape, size: g.shape.size * Math.exp(rng.gauss() * M.sizeSigma) };
   if (g.envelope.wall > 0) g.envelope.wall = Math.max(0, g.envelope.wall * Math.exp(rng.gauss() * M.sizeSigma));

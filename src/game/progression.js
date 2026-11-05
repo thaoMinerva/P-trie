@@ -2,6 +2,7 @@
 import { PARAMS, ORG } from '../data/index.js';
 import { normalizeDesign } from '../simulation/genome.js';
 import { registerOrganelle } from '../simulation/organelleDesign.js';
+import { registerWall, registerMembraneProtein } from '../simulation/envelopeDesign.js';
 
 const G = PARAMS.game;
 
@@ -17,29 +18,39 @@ export function launchCost(design) {
   if (d.type === 'eucaryote') cost += G.costEukaryote;
   cost += (d.customEnzymes || []).length * G.costCustomEnzyme;
   cost += (d.customOrganelles || []).length * G.costCustomEnzyme;
+  cost += ((d.customWalls || []).length + (d.customMembraneProteins || []).length) * G.costCustomEnzyme;
+  cost += Object.keys(d.membraneProteins || {}).length * G.costPerEnzyme;
   if (d.envelope.motility !== 'aucune') cost += 2 * d.envelope.motilityUnits;
   return Math.round(cost);
 }
 
 export function newProfile() {
-  return { version: 1, points: G.startPoints, totalEarned: 0, designs: [], customEnzymes: [], customOrganelles: [], archives: [], launched: 0, playerName: 'Vous' };
+  return { version: 1, points: G.startPoints, totalEarned: 0, designs: [], customEnzymes: [], customOrganelles: [], customWalls: [], customProteins: [], archives: [], launched: 0, playerName: 'Vous' };
 }
 
 export class Progression {
   constructor(profile = newProfile()) {
     this.p = profile; this.listeners = [];
     this.p.customOrganelles = this.p.customOrganelles || [];
+    this.p.customWalls = this.p.customWalls || [];
+    this.p.customProteins = this.p.customProteins || [];
+    for (const w of this.p.customWalls) registerWall(w.def);
+    for (const m of this.p.customProteins) registerMembraneProtein(m.def);
+    this.p.points = Math.max(G.pointsFloor, this.p.points); // plancher : on peut toujours relancer
     for (const o of this.p.customOrganelles) registerOrganelle(o.def);
   }
   onChange(fn) { this.listeners.push(fn); }
   changed() { for (const fn of this.listeners) fn(this.p); }
-  get points() { return this.p.points; }
+  get points() { return this.serverPoints ?? this.p.points; }
+  get totalEarned() { return this.serverTotal ?? this.p.totalEarned; }
+  /** Multijoueur : les points sont tenus par le serveur. */
+  setServerPoints(points, total) { this.serverPoints = points; this.serverTotal = total; this.changed(); }
 
   canLaunch(design) { return this.p.points >= launchCost(design); }
   spend(design) {
     const c = launchCost(design);
     if (this.p.points < c) return false;
-    this.p.points -= c; this.p.launched++;
+    this.p.points = Math.max(G.pointsFloor, this.p.points - c); this.p.launched++; // plancher de points
     this.changed();
     return true;
   }
@@ -68,6 +79,10 @@ export class Progression {
     if (i >= 0) this.p.customOrganelles[i] = entry; else this.p.customOrganelles.push(entry);
     this.changed();
   }
+  saveWall(def, spec) { registerWall(def); this.p.customWalls = this.p.customWalls.filter((e) => e.def.id !== def.id); this.p.customWalls.push({ def, spec }); this.changed(); }
+  deleteWall(id) { this.p.customWalls = this.p.customWalls.filter((e) => e.def.id !== id); this.changed(); }
+  saveProtein(def, spec) { registerMembraneProtein(def); this.p.customProteins = this.p.customProteins.filter((e) => e.def.id !== def.id); this.p.customProteins.push({ def, spec }); this.changed(); }
+  deleteProtein(id) { this.p.customProteins = this.p.customProteins.filter((e) => e.def.id !== id); this.changed(); }
   deleteOrganelle(id) { this.p.customOrganelles = this.p.customOrganelles.filter((e) => e.def.id !== id); this.changed(); }
   deleteEnzyme(id) { this.p.customEnzymes = this.p.customEnzymes.filter((e) => e.def.id !== id); this.changed(); }
 
