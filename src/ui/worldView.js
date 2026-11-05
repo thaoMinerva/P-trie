@@ -22,7 +22,35 @@ export const LAYERS = {
   lactate: { name: 'Lactate', field: 'lactate', max: 3, color: [255, 140, 66] },
   ethanol: { name: 'Éthanol', field: 'ethanol', max: 3, color: [184, 242, 230] },
   toxin: { name: 'Toxines', field: 'toxin', max: 1.5, color: [230, 30, 30] },
+  secreted: { name: 'Enzymes sécrétées (activité)', custom: 'secreted', color: [255, 80, 220] },
 };
+
+/** Valeur brute du calque dans la case i, et normalisation 0..1 pour la couleur. */
+export function layerValue(env, layer, i, autoMax = 1) {
+  const L = LAYERS[layer];
+  if (!L || layer === 'aucun') return null;
+  if (L.field) { const v = env.fields[MET[L.field].index][i]; return { v, t: Math.min(1, v / L.max) }; }
+  if (L.custom === 'light') { const v = env.lightAt(i); return { v: v * 100, t: v }; }
+  if (L.custom === 'temperature') { const v = env.temperature[i]; return { v, t: Math.min(1, Math.max(0, (v - 5) / 50)) }; }
+  if (L.custom === 'ph') { const v = env.pH[i]; return { v, t: Math.min(1, Math.max(0, (v - 4) / 6)) }; }
+  if (L.custom === 'salinity') { const v = env.salinity[i]; return { v, t: Math.min(1, v) }; }
+  if (L.custom === 'secreted') { const v = env.secreted[i]; return { v, t: Math.min(1, v / Math.max(1e-6, autoMax)) }; }
+  return null;
+}
+
+/** Description de la légende : dégradé CSS, bornes et unité. */
+export function layerLegend(layer, autoMax = 1) {
+  const L = LAYERS[layer];
+  if (!L || layer === 'aucun') return null;
+  const ramp = (c) => `linear-gradient(90deg, rgba(${c},0.05), rgba(${c},0.6), rgba(${c},0.95))`;
+  if (L.field) return { gradient: ramp(L.color.join(',')), min: '0', max: `≥ ${L.max}`, unit: 'u par case (10 × 10 µm)', low: 'absent', high: 'concentré' };
+  if (L.custom === 'light') return { gradient: ramp(L.color.join(',')), min: '0 %', max: '100 %', unit: 'lumière reçue', low: 'obscurité', high: 'plein soleil' };
+  if (L.custom === 'temperature') return { gradient: 'linear-gradient(90deg, rgb(0,80,255), rgb(128,160,128), rgb(255,80,0))', min: '5 °C', max: '55 °C', unit: 'température', low: 'froid', high: 'chaud' };
+  if (L.custom === 'ph') return { gradient: 'linear-gradient(90deg, rgb(255,40,0), rgb(128,240,128), rgb(0,40,255))', min: 'pH 4', max: 'pH 10', unit: 'acidité', low: 'acide', high: 'basique' };
+  if (L.custom === 'salinity') return { gradient: ramp(L.color.join(',')), min: '0', max: '1', unit: 'salinité relative (eau douce ≈ 0,12)', low: 'eau douce', high: 'saumure' };
+  if (L.custom === 'secreted') return { gradient: ramp(L.color.join(',')), min: '0', max: autoMax.toPrecision(2).replace('.', ','), unit: 'u transformées / s (échelle automatique)', low: 'aucune', high: 'intense' };
+  return null;
+}
 
 export class WorldView {
   constructor(canvas, getWorld) {
@@ -39,6 +67,8 @@ export class WorldView {
     this.onMapClick = null;
     this.frame = 0;
     this.hoverPop = null;
+    this.hover = null;
+    this.autoMax = 1;
     this.bindInput();
   }
 
@@ -70,6 +100,8 @@ export class WorldView {
     let drag = null;
     c.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, cx: this.cam.x, cy: this.cam.y, moved: false }; c.setPointerCapture(e.pointerId); });
     c.addEventListener('pointermove', (e) => {
+      const r = c.getBoundingClientRect();
+      this.hover = this.toWorld(e.clientX - r.left, e.clientY - r.top);
       if (!drag) return;
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
@@ -94,6 +126,15 @@ export class WorldView {
       const [wx2, wy2] = this.toWorld(sx, sy);
       this.cam.x += wx - wx2; this.cam.y += wy - wy2;
     }, { passive: false });
+  }
+
+  /** Valeur du calque actif sous la souris (pour la légende). */
+  hoverValue() {
+    const w = this.getWorld();
+    if (!this.hover || !w) return null;
+    const [x, y] = this.hover;
+    if (x < 0 || y < 0 || x > w.width || y > w.height) return null;
+    return layerValue(w.env, this.layer, w.env.idx(x, y), this.autoMax);
   }
 
   pick(wx, wy) {
@@ -127,19 +168,14 @@ export class WorldView {
     const lctx = lc.getContext('2d');
     const img = lctx.createImageData(env.gw, env.gh);
     const d = img.data;
+    if (L.custom === 'secreted') { let m = 0; for (let i = 0; i < env.n; i++) if (env.secreted[i] > m) m = env.secreted[i]; this.autoMax = Math.max(1e-4, m); }
     for (let i = 0; i < env.n; i++) {
+      const lv = layerValue(env, this.layer, i, this.autoMax);
+      const t = lv ? lv.t : 0;
       let r = 0, g = 0, b = 0, a = 0;
-      if (L.field) {
-        const v = Math.min(1, env.fields[MET[L.field].index][i] / L.max);
-        [r, g, b] = L.color; a = Math.sqrt(v) * 150;
-      } else if (L.custom === 'light') { [r, g, b] = L.color; a = env.lightAt(i) * 160; }
-      else if (L.custom === 'temperature') {
-        const t = Math.min(1, Math.max(0, (env.temperature[i] - 5) / 50));
-        r = 255 * t; g = 80 + 80 * (1 - Math.abs(t - 0.5) * 2); b = 255 * (1 - t); a = 150;
-      } else if (L.custom === 'ph') {
-        const t = Math.min(1, Math.max(0, (env.pH[i] - 4) / 6));
-        r = 255 * (1 - t); g = 200 * (1 - Math.abs(t - 0.5) * 2) + 40; b = 255 * t; a = 150;
-      } else if (L.custom === 'salinity') { [r, g, b] = L.color; a = Math.min(1, env.salinity[i]) * 200; }
+      if (L.custom === 'temperature') { r = 255 * t; g = 80 + 80 * (1 - Math.abs(t - 0.5) * 2); b = 255 * (1 - t); a = 150; }
+      else if (L.custom === 'ph') { r = 255 * (1 - t); g = 200 * (1 - Math.abs(t - 0.5) * 2) + 40; b = 255 * t; a = 150; }
+      else { [r, g, b] = L.color; a = (L.field ? Math.sqrt(t) * 150 : t * 200); }
       d[i * 4] = r; d[i * 4 + 1] = g; d[i * 4 + 2] = b; d[i * 4 + 3] = a;
     }
     lctx.putImageData(img, 0, 0);

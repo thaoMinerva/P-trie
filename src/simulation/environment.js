@@ -20,6 +20,7 @@ export class Environment {
     this.salinity = new Float32Array(this.n);
     this.pHBase = new Float32Array(this.n);
     this.pH = new Float32Array(this.n);
+    this.secreted = new Float32Array(this.n); // activité des enzymes sécrétées (u/s, moyenne glissante) – non matériel
     this.lightDepth = new Float32Array(this.gh);
     this.patchTargets = {};
     this.lightLevel = 1;
@@ -154,6 +155,8 @@ export class Environment {
       const dP = prot[i] * E.proteinDecay * dt; prot[i] -= dP; aa[i] += dP;
       const dS = st[i] * E.starchDecay * dt; st[i] -= dS; glc[i] += dS;
     }
+    const sec = this.secreted;
+    for (let i = 0; i < n; i++) sec[i] *= 0.97;
     if (tick % W.diffusionEvery === 0) {
       for (const id of ENV_METS) {
         const D = MET[id].diffusion * W.diffusionEvery;

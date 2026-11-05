@@ -1,12 +1,12 @@
 // Atelier d'enzymes (mode « briques ») : réaction, site actif, domaines, peptide signal, compromis cinétiques.
-import { BRICKS, METABOLITES, MET } from '../data/index.js';
-import { buildEnzyme, emptySpec, describe } from '../simulation/enzymeDesign.js';
+import { BRICKS, METABOLITES, MET, ENZYMES } from '../data/index.js';
+import { buildEnzyme, emptySpec, describe, specFromEnzyme } from '../simulation/enzymeDesign.js';
 import { ELEMENTS } from '../simulation/chem.js';
 import { lineChart } from '../ui/charts.js';
 import { h, clear, fmt, toast } from '../ui/dom.js';
 
 const CHOICES = METABOLITES.filter((m) => !['biomass', 'phagosome'].includes(m.id));
-const BRICK_COLORS = { site: '#e76f51', nad: '#577590', atp: '#f9c74f', antenne: '#52b788', thermo: '#f94144', psychro: '#4cc9f0', acido: '#f3722c', alcali: '#90be6d', disulfure: '#cdb4db', feedback: '#9b5de5', atp_haut: '#ffd166', atp_bas: '#ffb703', signal: '#adb5bd' };
+const BRICK_COLORS = { hill: '#06d6a0', stable: '#adb5bd', o2tol: '#4895ef', chaperon: '#e9c46a', site: '#e76f51', nad: '#577590', atp: '#f9c74f', antenne: '#52b788', thermo: '#f94144', psychro: '#4cc9f0', acido: '#f3722c', alcali: '#90be6d', disulfure: '#cdb4db', feedback: '#9b5de5', atp_haut: '#ffd166', atp_bas: '#ffb703', signal: '#adb5bd' };
 const EL_NAMES = { C: 'Carbone', N: 'Azote', P: 'Phosphore', Nic: 'NAD (nicotinamide)' };
 
 export class Workshop {
@@ -33,6 +33,12 @@ export class Workshop {
       h('section', { class: 'card' },
         h('h3', {}, '1 · Réaction catalysée'),
         h('label', { class: 'row' }, h('span', {}, 'Nom'), h('input', { type: 'text', value: s.name, oninput: (e) => { s.name = e.target.value; this.renderRight(); } })),
+        h('label', { class: 'row' }, h('span', {}, 'Partir de'), h('select', { onchange: (e) => {
+          const list = [...ENZYMES, ...this.ctx.progression.p.customEnzymes.map((x) => x.def)];
+          const src = list.find((x) => x.id === e.target.value);
+          if (src) { this.spec = specFromEnzyme(src); this.editingId = null; this.render(); toast(`Réaction de « ${src.name} » chargée : modifiez-la à votre guise.`, 'ok'); }
+        } }, h('option', { value: '' }, '— une enzyme existante (réaction et domaines requis) —'),
+          [...ENZYMES, ...this.ctx.progression.p.customEnzymes.map((x) => x.def)].map((x) => h('option', { value: x.id }, `${x.name} · ${x.category}`)))),
         h('div', { class: 'reaction' }, this.sideEditor('substrates', 'Substrats'), h('div', { class: 'arrow' }, '→'), this.sideEditor('products', 'Produits')),
         h('p', { class: 'small muted' }, 'Les éléments (C, N, P, NAD) doivent être conservés et la réaction ne doit pas créer d\'énergie : l\'ATP et le NADH produits doivent être « payés » par la dégradation des substrats.')),
       h('section', { class: 'card' },
@@ -96,6 +102,7 @@ export class Workshop {
           kv('Cofacteurs', d.cofactors.join(', ') || 'aucun'),
           kv('Inhibiteurs', Object.entries(d.inhibitors).map(([m, ki]) => `${MET[m]?.name} (Ki ${ki})`).join(', ') || 'aucun'),
           kv('Régulation', d.regulation === 'atpHigh' ? 'active si ATP abondant' : d.regulation === 'atpLow' ? 'active si ATP bas' : d.feedback ? 'rétro-inhibition' : 'aucune'),
+          kv('Coopérativité', d.hill > 1 ? `Hill ${d.hill} (réponse sigmoïde)` : 'non (Michaelis-Menten)'),
           kv('Localisation', d.location),
           kv('Coût de synthèse', `${fmt(d.cost.synth, 3)} u biomasse /conc/µm³`),
           kv('Entretien', `${fmt(d.cost.upkeep * 1000, 2)} mATP/s /conc/µm³`),
@@ -109,7 +116,7 @@ export class Workshop {
       this.libraryCard());
     requestAnimationFrame(() => {
       const km = d.km._, pts = [];
-      for (let i = 0; i <= 40; i++) { const S = (i / 40) * km * 10; pts.push([S, d.kcat * S / (km + S)]); }
+      for (let i = 0; i <= 40; i++) { const S = (i / 40) * km * 10, n = d.hill || 1; pts.push([S, d.kcat * S ** n / (km ** n + S ** n)]); }
       lineChart(mm, [{ color: '#f9c74f', points: pts }], { yMin: 0, xFmt: (v) => fmt(v, 3), markers: [{ x: km, color: '#888' }] });
       const tp = []; for (let T = 0; T <= 60; T += 1) tp.push([T, Math.exp(-(((T - d.tOpt) / d.tWidth) ** 2))]);
       lineChart(tc, [{ color: '#f94144', points: tp }], { yMin: 0, yMax: 1, xFmt: (v) => `${v} °C` });
@@ -151,6 +158,9 @@ function domainEffect(b) {
   if (b.tWidthMul && b.tWidthMul !== 1) parts.push(`tolérance ×${b.tWidthMul}`);
   if (b.regulation) parts.push('régulation');
   if (b.feedback) parts.push('rétro-inhibition');
+  if (b.hill) parts.push(`Hill ${b.hill}`);
+  if (b.upkeepMul) parts.push(`entretien ×${b.upkeepMul}`);
+  if (b.o2Tolerant) parts.push("insensible à l'O₂");
   parts.push(`coût +${Math.round(b.costAdd * 100)} %`);
   return parts.join(' · ');
 }

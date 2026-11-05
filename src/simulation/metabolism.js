@@ -83,7 +83,8 @@ export function metabolize(cell, env, dt, stats) {
       if (sub.i < 0) conc = light;
       else if (sub.env) conc = fields[sub.i][g] / gv;
       else conc = p[sub.i] / V;
-      v *= conc / (sub.km + conc);
+      if (sub.hill === 1) v *= conc / (sub.km + conc);
+      else { const ch = Math.pow(conc, sub.hill); v *= ch / (Math.pow(sub.km, sub.hill) + ch); } // coopérativité (Hill)
     }
     for (let s = 0; s < e.inhib.length; s++) { const inh = e.inhib[s]; v /= 1 + (p[inh.i] / V) / inh.ki; }
     if (e.feedback) v /= 1 + (p[e.feedback.i] / V) / 0.3;
@@ -110,6 +111,7 @@ export function metabolize(cell, env, dt, stats) {
       const pr = e.prods[s];
       if (pr.env) fields[pr.i][g] += v * pr.n; else p[pr.i] += v * pr.n;
     }
+    if (e.loc === 'secrete') env.secreted[g] += v / dt;
     if (cell.flux) cell.flux[k] = v / dt;
   }
 

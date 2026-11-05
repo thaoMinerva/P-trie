@@ -5,12 +5,13 @@ import { serializeWorld, deserializeWorld } from './simulation/serialize.js';
 import { GhostWorldSource } from './world/ghostSource.js';
 import { Progression, newProfile, launchCost } from './game/progression.js';
 import { loadProfile, saveProfile, saveWorldSnapshot, loadWorldSnapshot, clearAll } from './game/storage.js';
-import { WorldView, LAYERS } from './ui/worldView.js';
+import { WorldView, LAYERS, layerLegend } from './ui/worldView.js';
 import { renderCellSheet } from './ui/cellSheet.js';
 import { renderMiniPops, renderPopulations, renderArchives, renderJournal, popSeries } from './ui/panels.js';
 import { lineChart } from './ui/charts.js';
 import { Editor } from './editor/editor.js';
 import { Workshop } from './workshop/workshop.js';
+import { OrganelleWorkshop } from './workshop/organelleWorkshop.js';
 import { h, $, $$, fmt, fmtTime, toast } from './ui/dom.js';
 
 const W = PARAMS.world;
@@ -60,7 +61,7 @@ async function saveAll(quiet = true) {
 }
 
 // ------------------------------------------------------------------ interface
-let view, editor, workshop, journalDirty = true, selected = null;
+let view, editor, workshop, orgWorkshop, journalDirty = true, selected = null;
 
 function setup() {
   const canvas = $('#world-canvas');
@@ -71,7 +72,8 @@ function setup() {
 
   const layerSel = $('#layer-select');
   for (const [k, l] of Object.entries(LAYERS)) layerSel.append(h('option', { value: k, selected: k === view.layer }, l.name));
-  layerSel.addEventListener('change', () => { view.layer = layerSel.value; view.frame = 0; });
+  layerSel.addEventListener('change', () => { view.layer = layerSel.value; view.frame = 0; updateLegend(); });
+  updateLegend();
 
   $$('.tab').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   $$('.speed').forEach((b) => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
@@ -89,6 +91,7 @@ function setup() {
 
   editor = new Editor($('#editor-root'), { progression, onLaunch: launch });
   workshop = new Workshop($('#workshop-root'), { progression, onSaved: () => editor.renderControls() });
+  orgWorkshop = new OrganelleWorkshop($('#organelle-root'), { progression, onSaved: () => editor.renderControls() });
 
   document.addEventListener('keydown', (e) => {
     if (e.target.matches('input, select, textarea')) return;
@@ -111,6 +114,7 @@ function showTab(tab) {
   if (tab === 'archives') renderArchives($('#archives-root'), app.world, progression);
   if (tab === 'editeur') { editor.renderViability(); editor.drawPreview(); }
   if (tab === 'atelier') workshop.renderRight();
+  if (tab === 'organites') orgWorkshop.renderRight();
 }
 
 function setSpeed(s) { app.speed = s; $$('.speed').forEach((b) => b.classList.toggle('on', +b.dataset.speed === s)); }
@@ -158,6 +162,27 @@ function refreshSheet() {
   }));
 }
 
+// Légende du calque actif : dégradé, bornes, unité et valeur sous la souris.
+let legendKey = '';
+function updateLegend() {
+  const box = $('#map-scale');
+  const lg = layerLegend(view.layer, view.autoMax);
+  if (!lg) { box.style.display = 'none'; legendKey = ''; return; }
+  box.style.display = '';
+  const key = view.layer + lg.max;
+  if (key !== legendKey) {
+    legendKey = key;
+    box.replaceChildren(
+      h('div', { class: 'scale-title' }, h('b', {}, LAYERS[view.layer].name), h('span', { class: 'muted' }, ` · ${lg.unit}`)),
+      h('div', { class: 'scale-bar', style: { background: lg.gradient } }),
+      h('div', { class: 'scale-ticks' }, h('span', {}, `${lg.min} (${lg.low})`), h('span', {}, `${lg.max} (${lg.high})`)),
+      h('div', { class: 'scale-here', id: 'scale-here' }));
+  }
+  const hv = view.hoverValue();
+  const here = $('#scale-here');
+  if (here) here.textContent = hv ? `Sous la souris : ${fmt(hv.v, hv.v >= 100 ? 0 : hv.v >= 10 ? 1 : 2)}` : 'Survolez la carte pour lire la valeur';
+}
+
 function updateHud() {
   $('#hud-points').textContent = fmt(progression.points, 1);
   if (app.world) {
@@ -191,6 +216,7 @@ function loop(now) {
     panelTimer = 0;
     updateHud();
     if (app.tab === 'monde') {
+      updateLegend();
       renderMiniPops($('#mini-pops'), app.world, { onHover: (id) => { view.hoverPop = id; }, onFocus: focusPop });
       if (selected || view.selectedId) refreshSheet();
       if (journalDirty) { renderJournal($('#journal'), app.world); journalDirty = false; }

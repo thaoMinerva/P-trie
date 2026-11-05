@@ -14,6 +14,7 @@
       <button class="tab on" data-tab="monde">🌍 Monde</button>
       <button class="tab" data-tab="editeur">🧬 Éditeur de cellule</button>
       <button class="tab" data-tab="atelier">⚗️ Atelier d'enzymes</button>
+      <button class="tab" data-tab="organites">🫧 Atelier d'organites</button>
       <button class="tab" data-tab="populations">📈 Populations</button>
       <button class="tab" data-tab="archives">🗄️ Archives</button>
     </nav>
@@ -42,6 +43,7 @@
               <label>Calque <select id="layer-select"></select></label>
               <button class="btn small" id="btn-fit">⤢ Recadrer</button>
             </div>
+            <div class="map-scale" id="map-scale"></div>
             <div class="map-legend small">Molette : zoom · glisser : déplacer · clic : fiche de la cellule</div>
           </div>
           <div class="chart-wrap"><canvas id="world-chart" class="chart"></canvas></div>
@@ -64,6 +66,7 @@
     </section>
     <section class="view" id="view-editeur"><div id="editor-root"></div></section>
     <section class="view" id="view-atelier"><div id="workshop-root"></div></section>
+    <section class="view" id="view-organites"><div id="organelle-root"></div></section>
     <section class="view" id="view-populations"><div id="populations-root" class="page"></div></section>
     <section class="view" id="view-archives"><div id="archives-root" class="page"></div></section>
   </main>

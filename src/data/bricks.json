@@ -1,31 +1,211 @@
 {
   "_doc": "Briques de l'atelier d'enzymes. Chaque brique modifie les paramètres de base avec des compromis. Les multiplicateurs (Mul) se composent ; shift s'ajoute.",
-  "base": { "kmInternal": 0.05, "kmSecreted": 0.004, "kcat": 0.05, "tOpt": 30, "tWidth": 14, "pHOpt": 7.0, "pHWidth": 2.0,
-            "synth": 0.02, "upkeep": 0.0015, "volume": 0.015, "stoichPenalty": 0.12, "drivingForceRef": 1.5, "tradeoffKm": 0.8, "tradeoffKcat": 0.45, "maxDomains": 5 },
+  "base": {
+    "kmInternal": 0.05,
+    "kmSecreted": 0.004,
+    "kcat": 0.05,
+    "tOpt": 30,
+    "tWidth": 14,
+    "pHOpt": 7.0,
+    "pHWidth": 2.0,
+    "synth": 0.02,
+    "upkeep": 0.0015,
+    "volume": 0.015,
+    "stoichPenalty": 0.12,
+    "drivingForceRef": 1.5,
+    "tradeoffKm": 0.8,
+    "tradeoffKcat": 0.45,
+    "maxDomains": 6
+  },
   "activeSites": [
-    { "id": "standard", "name": "Site actif standard", "kmMul": 1.0, "kcatMul": 1.0, "costMul": 1.0, "description": "Compromis équilibré entre affinité et vitesse." },
-    { "id": "affinite", "name": "Site actif haute affinité", "kmMul": 0.3, "kcatMul": 0.55, "costMul": 1.15, "description": "Capte le substrat même très dilué (Km bas), mais tourne plus lentement." },
-    { "id": "rapide", "name": "Site actif à turnover rapide", "kmMul": 3.0, "kcatMul": 1.8, "costMul": 1.2, "description": "Vmax élevée, mais n'est efficace qu'à forte concentration de substrat." },
-    { "id": "diffusion", "name": "Site « parfait » (limité par la diffusion)", "kmMul": 0.6, "kcatMul": 1.3, "costMul": 1.9, "description": "Rare et cher : bon sur les deux plans, mais la protéine est grosse et coûteuse." }
+    {
+      "id": "standard",
+      "name": "Site actif standard",
+      "kmMul": 1.0,
+      "kcatMul": 1.0,
+      "costMul": 1.0,
+      "description": "Compromis équilibré entre affinité et vitesse."
+    },
+    {
+      "id": "affinite",
+      "name": "Site actif haute affinité",
+      "kmMul": 0.3,
+      "kcatMul": 0.55,
+      "costMul": 1.15,
+      "description": "Capte le substrat même très dilué (Km bas), mais tourne plus lentement."
+    },
+    {
+      "id": "rapide",
+      "name": "Site actif à turnover rapide",
+      "kmMul": 3.0,
+      "kcatMul": 1.8,
+      "costMul": 1.2,
+      "description": "Vmax élevée, mais n'est efficace qu'à forte concentration de substrat."
+    },
+    {
+      "id": "diffusion",
+      "name": "Site « parfait » (limité par la diffusion)",
+      "kmMul": 0.6,
+      "kcatMul": 1.3,
+      "costMul": 1.9,
+      "description": "Rare et cher : bon sur les deux plans, mais la protéine est grosse et coûteuse."
+    }
   ],
   "domains": [
-    { "id": "nad", "name": "Domaine de Rossmann (liaison NAD⁺/NADH)", "provides": "NAD", "costAdd": 0.25, "volumeAdd": 0.004, "description": "Requis pour toute réaction d'oxydoréduction utilisant NAD⁺/NADH." },
-    { "id": "atp", "name": "Domaine de liaison ATP/Mg²⁺", "provides": "ATP/Mg", "costAdd": 0.25, "volumeAdd": 0.004, "description": "Requis pour consommer ou produire de l'ATP (phosphorylation au niveau du substrat)." },
-    { "id": "antenne", "name": "Antenne pigmentaire (chlorophylle)", "provides": "light", "costAdd": 0.6, "volumeAdd": 0.01, "description": "Requise pour utiliser la lumière. Coûteuse et génère des espèces réactives de l'oxygène." },
-    { "id": "thermo", "name": "Domaine thermostable", "tOptShift": 12, "tWidthMul": 1.15, "kcatMul": 0.9, "costAdd": 0.3, "description": "Température optimale +12 °C, un peu plus lente à basse température." },
-    { "id": "psychro", "name": "Domaine psychrophile (flexible)", "tOptShift": -12, "tWidthMul": 0.9, "kcatMul": 1.12, "costAdd": 0.1, "description": "Température optimale −12 °C, rapide mais fragile." },
-    { "id": "acido", "name": "Surface acidophile", "pHShift": -2, "costAdd": 0.15, "description": "pH optimal −2." },
-    { "id": "alcali", "name": "Surface alcalophile", "pHShift": 2, "costAdd": 0.15, "description": "pH optimal +2." },
-    { "id": "disulfure", "name": "Ponts disulfure (stabilité)", "tWidthMul": 1.3, "pHWidthMul": 1.3, "kcatMul": 0.95, "costAdd": 0.35, "description": "Tolère des températures et des pH plus variés, mais coûte plus cher à synthétiser." },
-    { "id": "feedback", "name": "Domaine régulateur (rétro-inhibition)", "feedback": true, "costAdd": 0.15, "description": "Le produit principal inhibe l'enzyme : évite de gaspiller substrat et ATP quand le produit s'accumule." },
-    { "id": "atp_haut", "name": "Senseur énergétique (actif si ATP abondant)", "regulation": "atpHigh", "costAdd": 0.15, "description": "Pour les voies de stockage ou de biosynthèse." },
-    { "id": "atp_bas", "name": "Senseur énergétique (actif si ATP bas)", "regulation": "atpLow", "costAdd": 0.15, "description": "Pour mobiliser des réserves ou activer une voie de secours." }
+    {
+      "id": "nad",
+      "name": "Domaine de Rossmann (liaison NAD⁺/NADH)",
+      "provides": "NAD",
+      "costAdd": 0.25,
+      "volumeAdd": 0.004,
+      "description": "Requis pour toute réaction d'oxydoréduction utilisant NAD⁺/NADH."
+    },
+    {
+      "id": "atp",
+      "name": "Domaine de liaison ATP/Mg²⁺",
+      "provides": "ATP/Mg",
+      "costAdd": 0.25,
+      "volumeAdd": 0.004,
+      "description": "Requis pour consommer ou produire de l'ATP (phosphorylation au niveau du substrat)."
+    },
+    {
+      "id": "antenne",
+      "name": "Antenne pigmentaire (chlorophylle)",
+      "provides": "light",
+      "costAdd": 0.6,
+      "volumeAdd": 0.01,
+      "description": "Requise pour utiliser la lumière. Coûteuse et génère des espèces réactives de l'oxygène."
+    },
+    {
+      "id": "thermo",
+      "name": "Domaine thermostable",
+      "tOptShift": 12,
+      "tWidthMul": 1.15,
+      "kcatMul": 0.9,
+      "costAdd": 0.3,
+      "description": "Température optimale +12 °C, un peu plus lente à basse température."
+    },
+    {
+      "id": "psychro",
+      "name": "Domaine psychrophile (flexible)",
+      "tOptShift": -12,
+      "tWidthMul": 0.9,
+      "kcatMul": 1.12,
+      "costAdd": 0.1,
+      "description": "Température optimale −12 °C, rapide mais fragile."
+    },
+    {
+      "id": "acido",
+      "name": "Surface acidophile",
+      "pHShift": -2,
+      "costAdd": 0.15,
+      "description": "pH optimal −2."
+    },
+    {
+      "id": "alcali",
+      "name": "Surface alcalophile",
+      "pHShift": 2,
+      "costAdd": 0.15,
+      "description": "pH optimal +2."
+    },
+    {
+      "id": "disulfure",
+      "name": "Ponts disulfure (stabilité)",
+      "tWidthMul": 1.3,
+      "pHWidthMul": 1.3,
+      "kcatMul": 0.95,
+      "costAdd": 0.35,
+      "description": "Tolère des températures et des pH plus variés, mais coûte plus cher à synthétiser."
+    },
+    {
+      "id": "feedback",
+      "name": "Domaine régulateur (rétro-inhibition)",
+      "feedback": true,
+      "costAdd": 0.15,
+      "description": "Le produit principal inhibe l'enzyme : évite de gaspiller substrat et ATP quand le produit s'accumule."
+    },
+    {
+      "id": "atp_haut",
+      "name": "Senseur énergétique (actif si ATP abondant)",
+      "regulation": "atpHigh",
+      "costAdd": 0.15,
+      "description": "Pour les voies de stockage ou de biosynthèse."
+    },
+    {
+      "id": "atp_bas",
+      "name": "Senseur énergétique (actif si ATP bas)",
+      "regulation": "atpLow",
+      "costAdd": 0.15,
+      "description": "Pour mobiliser des réserves ou activer une voie de secours."
+    },
+    {
+      "id": "hill",
+      "name": "Sous-unités coopératives (multimère)",
+      "hill": 2,
+      "kcatMul": 1.2,
+      "costAdd": 0.4,
+      "volumeAdd": 0.006,
+      "description": "L'enzyme s'assemble en plusieurs sous-unités : réponse sigmoïde (coefficient de Hill 2). Presque inactive à faible substrat, très efficace dès qu'il abonde : idéal pour une voie qui ne doit s'allumer qu'en cas d'excès."
+    },
+    {
+      "id": "stable",
+      "name": "Résistance à la protéolyse",
+      "upkeepMul": 0.5,
+      "costAdd": 0.3,
+      "description": "Repliement compact qui résiste aux protéases : l'enzyme est renouvelée deux fois moins souvent (entretien ×0,5) mais coûte plus cher à synthétiser."
+    },
+    {
+      "id": "o2tol",
+      "name": "Centre métallique protégé (tolérant à l'O₂)",
+      "o2Tolerant": true,
+      "kcatMul": 0.75,
+      "costAdd": 0.4,
+      "description": "Protège les centres fer-soufre de l'oxydation : supprime l'inhibition par l'O₂ (utile pour fixer l'azote en milieu aéré), au prix d'une vitesse réduite."
+    },
+    {
+      "id": "chaperon",
+      "name": "Domaine chaperon intégré (tolérance au stress)",
+      "tWidthMul": 1.2,
+      "pHWidthMul": 1.2,
+      "costAdd": 0.25,
+      "description": "Aide l'enzyme à se replier correctement : tolère des écarts de température et de pH un peu plus grands."
+    }
   ],
   "signals": [
-    { "id": "cytosol", "name": "Aucun (cytosol)", "location": "cytosol", "costAdd": 0, "description": "L'enzyme reste dans le cytoplasme." },
-    { "id": "mts", "name": "Séquence d'adressage mitochondrial", "location": "mitochondrie", "costAdd": 0.05, "description": "Envoie l'enzyme dans les mitochondries (eucaryotes) ; chez les procaryotes elle est ancrée à la membrane." },
-    { "id": "ctp", "name": "Peptide de transit chloroplastique", "location": "chloroplaste", "costAdd": 0.05, "description": "Envoie l'enzyme dans les chloroplastes ; chez les procaryotes, ancrage membranaire." },
-    { "id": "tm", "name": "Hélice transmembranaire", "location": "membrane", "costAdd": 0.08, "description": "Enzyme membranaire : vitesse limitée par la surface de la cellule." },
-    { "id": "sec", "name": "Peptide signal de sécrétion", "location": "secrete", "costAdd": 0.1, "description": "Enzyme sécrétée : agit sur les substrats du milieu (polymères, etc.), produits libérés autour de la cellule." }
+    {
+      "id": "cytosol",
+      "name": "Cytosol (pas de signal)",
+      "location": "cytosol",
+      "costAdd": 0,
+      "description": "L'enzyme reste dans le cytoplasme."
+    },
+    {
+      "id": "mts",
+      "name": "Séquence d'adressage mitochondrial",
+      "location": "mitochondrie",
+      "costAdd": 0.05,
+      "description": "Envoie l'enzyme dans les mitochondries (eucaryotes) ; chez les procaryotes elle est ancrée à la membrane."
+    },
+    {
+      "id": "ctp",
+      "name": "Peptide de transit chloroplastique",
+      "location": "chloroplaste",
+      "costAdd": 0.05,
+      "description": "Envoie l'enzyme dans les chloroplastes ; chez les procaryotes, ancrage membranaire."
+    },
+    {
+      "id": "tm",
+      "name": "Hélice transmembranaire",
+      "location": "membrane",
+      "costAdd": 0.08,
+      "description": "Enzyme membranaire : vitesse limitée par la surface de la cellule."
+    },
+    {
+      "id": "sec",
+      "name": "Peptide signal de sécrétion",
+      "location": "secrete",
+      "costAdd": 0.1,
+      "description": "Enzyme sécrétée : agit sur les substrats du milieu (polymères, etc.), produits libérés autour de la cellule."
+    }
   ]
 }

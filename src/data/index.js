@@ -1,5 +1,5 @@
 // Chargeur des données biologiques (JSON) – fonctionne dans le navigateur (fetch) et sous Node (fs).
-const FILES = ['metabolites', 'enzymes', 'organelles', 'envelope', 'params', 'bricks', 'archetypes'];
+const FILES = ['metabolites', 'enzymes', 'organelles', 'envelope', 'params', 'bricks', 'archetypes', 'organelleBricks'];
 
 async function loadJSON(name) {
   const url = new URL(`./${name}.json`, import.meta.url);
@@ -23,3 +23,5 @@ export const ENVELOPE = raw.envelope;
 export const PARAMS = raw.params;
 export const BRICKS = raw.bricks;
 export const ARCHETYPES = raw.archetypes.list;
+export const ORG_BRICKS = raw.organelleBricks;
+export const BUILTIN_ORGANELLES = new Set(ORGANELLES.map((o) => o.id));

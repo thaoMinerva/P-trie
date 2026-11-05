@@ -1,6 +1,7 @@
 // Progression du joueur : points, coût de lancement, conceptions et enzymes enregistrées, archives.
 import { PARAMS, ORG } from '../data/index.js';
 import { normalizeDesign } from '../simulation/genome.js';
+import { registerOrganelle } from '../simulation/organelleDesign.js';
 
 const G = PARAMS.game;
 
@@ -15,16 +16,21 @@ export function launchCost(design) {
   }
   if (d.type === 'eucaryote') cost += G.costEukaryote;
   cost += (d.customEnzymes || []).length * G.costCustomEnzyme;
+  cost += (d.customOrganelles || []).length * G.costCustomEnzyme;
   if (d.envelope.motility !== 'aucune') cost += 2 * d.envelope.motilityUnits;
   return Math.round(cost);
 }
 
 export function newProfile() {
-  return { version: 1, points: G.startPoints, totalEarned: 0, designs: [], customEnzymes: [], archives: [], launched: 0, playerName: 'Vous' };
+  return { version: 1, points: G.startPoints, totalEarned: 0, designs: [], customEnzymes: [], customOrganelles: [], archives: [], launched: 0, playerName: 'Vous' };
 }
 
 export class Progression {
-  constructor(profile = newProfile()) { this.p = profile; this.listeners = []; }
+  constructor(profile = newProfile()) {
+    this.p = profile; this.listeners = [];
+    this.p.customOrganelles = this.p.customOrganelles || [];
+    for (const o of this.p.customOrganelles) registerOrganelle(o.def);
+  }
   onChange(fn) { this.listeners.push(fn); }
   changed() { for (const fn of this.listeners) fn(this.p); }
   get points() { return this.p.points; }
@@ -55,6 +61,14 @@ export class Progression {
     if (i >= 0) this.p.customEnzymes[i] = entry; else this.p.customEnzymes.push(entry);
     this.changed();
   }
+  saveOrganelle(def, spec) {
+    registerOrganelle(def);
+    const i = this.p.customOrganelles.findIndex((e) => e.def.id === def.id);
+    const entry = { def, spec };
+    if (i >= 0) this.p.customOrganelles[i] = entry; else this.p.customOrganelles.push(entry);
+    this.changed();
+  }
+  deleteOrganelle(id) { this.p.customOrganelles = this.p.customOrganelles.filter((e) => e.def.id !== id); this.changed(); }
   deleteEnzyme(id) { this.p.customEnzymes = this.p.customEnzymes.filter((e) => e.def.id !== id); this.changed(); }
 
   archive(summary) {

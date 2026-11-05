@@ -1,6 +1,7 @@
 // Génome (= conception d'un organisme) : normalisation, phénotype dérivé, mutations.
 import { PARAMS, ORG, ORGANELLES, ENVELOPE, MET } from '../data/index.js';
 import { computeGeometry } from './geometry.js';
+import { registerOrganelle } from './organelleDesign.js';
 
 const C = PARAMS.cell;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -34,6 +35,7 @@ export function normalizeDesign(d) {
   const mot = ENVELOPE.motility[e.motility];
   if (!mot || !mot.types.includes(g.type)) e.motility = 'aucune';
   e.motilityUnits = e.motility === 'aucune' ? 0 : clamp(Math.round(e.motilityUnits || 1), 1, ENVELOPE.motility[e.motility].maxUnits);
+  for (const co of g.customOrganelles || []) registerOrganelle(co);
   const orgs = {};
   for (const o of ORGANELLES) {
     let n = Math.round(g.organelles?.[o.id] || 0);
@@ -48,6 +50,7 @@ export function normalizeDesign(d) {
   for (const [id, c] of Object.entries(g.enzymes || {})) { const v = clamp(+c || 0, 0, 10); if (v > 0.01) enz[id] = +v.toFixed(3); }
   g.enzymes = enz;
   g.customEnzymes = (g.customEnzymes || []).filter((ce) => enz[ce.id] !== undefined);
+  g.customOrganelles = (g.customOrganelles || []).filter((co) => orgs[co.id] !== undefined);
   g.hue = g.hue || 0;
   return g;
 }
@@ -67,9 +70,13 @@ export function computePhenotype(design, registry) {
   let volUsed = 0, massPerV = 0, upkeepPerV = 0;
   const fx = { storage: 0, proteinSynthesis: 0, secretion: 0, digestion: 0, osmoregulation: 0, rosDetox: 0, hyperProtect: 0, cheapVolume: 0, membraneBoost: 0, ribosomes: 0 };
   let phagocytosis = false, autophagy = false;
+  const capacities = { mitochondrie: 0, chloroplaste: 0 };
+  for (const co of g.customOrganelles || []) registerOrganelle(co);
   for (const [id, n] of Object.entries(g.organelles)) {
     const o = ORG[id]; if (!o) continue;
     volUsed += o.volume * n; massPerV += o.mass * n; upkeepPerV += o.upkeep * n;
+    if (o.effects.compartment) capacities[o.effects.compartment] += (o.effects.capacity || 0) * n;
+    for (const [c, v] of Object.entries(o.effects.capacities || {})) capacities[c] = (capacities[c] || 0) + v * n;
     for (const [k, v] of Object.entries(o.effects)) {
       if (typeof v === 'number' && k in fx) fx[k] += v * n;
       if (k === 'phagocytosis') phagocytosis = true;
@@ -81,8 +88,8 @@ export function computePhenotype(design, registry) {
 
   // Capacités des compartiments
   const membraneFactor = Math.min(1.25, C.membraneCapacity * sv * (1 + fx.membraneBoost));
-  const mitoFactor = Math.min(1.6, orgCount('mitochondrie') * (ORG.mitochondrie.effects.capacity));
-  const chloroFactor = Math.min(1.6, orgCount('chloroplaste') * (ORG.chloroplaste.effects.capacity));
+  const mitoFactor = Math.min(1.6, capacities.mitochondrie);
+  const chloroFactor = Math.min(1.6, capacities.chloroplaste);
   const secretionFactor = Math.min(1.3, 0.5 + fx.secretion);
 
   const enzymes = [];
@@ -103,7 +110,8 @@ export function computePhenotype(design, registry) {
     volUsed += def.cost.volume * conc;
     massPerV += def.cost.synth * conc;
     upkeepPerV += def.cost.upkeep * conc;
-    const subs = Object.entries(def.substrates).map(([m, n]) => ({ m, i: m === 'light' ? -1 : MET[m].index, n, km: def.km?.[m] ?? def.km?._ ?? C.kmCofactor, env: def.location === 'secrete' && MET[m]?.env }));
+    const subs = Object.entries(def.substrates).map(([m, n]) => ({ m, i: m === 'light' ? -1 : MET[m].index, n, km: def.km?.[m] ?? def.km?._ ?? C.kmCofactor, env: def.location === 'secrete' && MET[m]?.env,
+      hill: (def.hill > 1 && m !== 'light' && !MET[m].cofactor) ? def.hill : 1 }));
     const prods = Object.entries(def.products).map(([m, n]) => ({ m, i: MET[m].index, n, env: def.location === 'secrete' && MET[m]?.env }));
     const inhib = Object.entries(def.inhibitors || {}).map(([m, ki]) => ({ i: MET[m].index, ki }));
     const mainProduct = prods.find((p) => !MET[p.m].cofactor) || null;

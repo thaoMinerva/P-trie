@@ -1,0 +1,20 @@
+{
+  "_doc": "Atelier d'organites. Un organite = une enveloppe + une taille (fraction du volume cellulaire) + 1 à 3 modules fonctionnels. L'effet de chaque module est proportionnel à la taille ; plusieurs modules partagent l'espace (efficacité réduite). Coefficients calibrés sur les organites de la bibliothèque (ex. mitochondrie : 2 % du volume → capacité respiratoire 0,12).",
+  "base": { "massPerVolume": 0.5, "massPerModule": 0.15, "upkeepPerVolume": 0.03, "upkeepPerModule": 0.3, "multiModuleEfficiency": 0.7, "maxModules": 3, "minSize": 0.005, "maxSize": 0.15, "maxCount": 10 },
+  "membranes": [
+    { "id": "coque", "name": "Coque protéique (microcompartiment)", "types": ["procaryote", "eucaryote"], "massMul": 0.8, "upkeepMul": 0.7, "description": "Enveloppe de protéines, sans lipides (comme les carboxysomes) : bon marché, possible chez les procaryotes, mais ne peut pas maintenir de gradient de protons ni isoler un contenu agressif." },
+    { "id": "simple", "name": "Membrane simple", "types": ["eucaryote"], "massMul": 1.0, "upkeepMul": 1.0, "description": "Bicouche lipidique issue du système endomembranaire : isole le contenu (digestion, stockage, pompage d'eau)." },
+    { "id": "double", "name": "Double membrane (endosymbiote)", "types": ["eucaryote"], "massMul": 1.3, "upkeepMul": 1.3, "description": "Héritée d'une bactérie endosymbiotique : peut porter une chaîne de transport d'électrons (respiration, photosynthèse). La plus coûteuse." }
+  ],
+  "modules": [
+    { "id": "respiration", "name": "Crêtes respiratoires", "effect": "capacities.mitochondrie", "coef": 6, "membranes": ["double"], "exclusive": ["photosynthese"], "description": "Héberge le cycle de Krebs et la chaîne respiratoire (enzymes adressées à la mitochondrie)." },
+    { "id": "photosynthese", "name": "Thylakoïdes chlorophylliens", "effect": "capacities.chloroplaste", "coef": 4, "membranes": ["double"], "exclusive": ["respiration"], "description": "Héberge les photosystèmes et le cycle de Calvin (enzymes adressées au chloroplaste)." },
+    { "id": "membranes", "name": "Replis membranaires internes", "effect": "membraneBoost", "coef": 8, "membranes": ["coque", "simple"], "description": "Augmente la surface membranaire disponible pour les enzymes membranaires (utile aux procaryotes)." },
+    { "id": "stockage", "name": "Réservoir de stockage", "effect": "storage", "coef": 8, "extra": { "hyperProtect": 2.5, "cheapVolume": 1 }, "membranes": ["coque", "simple", "double"], "description": "Augmente la capacité de réserve ; le volume occupé coûte peu de biomasse." },
+    { "id": "osmo", "name": "Pompe à eau (osmorégulation)", "effect": "osmoregulation", "coef": 20, "membranes": ["simple"], "description": "Expulse l'eau qui entre en milieu hypotonique." },
+    { "id": "detox", "name": "Catalase encapsulée", "effect": "rosDetox", "coef": 15, "membranes": ["coque", "simple"], "description": "Détruit les espèces réactives de l'oxygène." },
+    { "id": "digestion", "name": "Hydrolases acides (digestion)", "effect": "digestion", "coef": 0.27, "flags": ["phagocytosis", "autophagy"], "membranes": ["simple"], "description": "Digère les proies phagocytées et permet l'autophagie. Nécessaire à la phagocytose." },
+    { "id": "secretion", "name": "Voie de sécrétion", "effect": "secretion", "coef": 10, "membranes": ["simple"], "description": "Améliore la sécrétion des enzymes extracellulaires." },
+    { "id": "traduction", "name": "Usine à protéines", "effect": "proteinSynthesis", "coef": 4, "membranes": ["coque", "simple"], "description": "Accélère la synthèse protéique (croissance)." }
+  ]
+}

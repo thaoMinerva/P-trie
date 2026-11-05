@@ -8,6 +8,7 @@ export const SITE = Object.fromEntries(BRICKS.activeSites.map((s) => [s.id, s]))
 export const DOMAIN = Object.fromEntries(BRICKS.domains.map((d) => [d.id, d]));
 export const SIGNAL = Object.fromEntries(BRICKS.signals.map((s) => [s.id, s]));
 
+let idCounter = 0;
 export function emptySpec() {
   return { name: 'Nouvelle enzyme', substrates: { glucose: 1 }, products: {}, activeSite: 'standard', domains: [], signal: 'cytosol', tradeoff: 0 };
 }
@@ -48,8 +49,9 @@ export function buildEnzyme(spec, id = null) {
   const stoichSum = Object.entries(subs).filter(([m]) => m !== 'light').reduce((a, [, n]) => a + n, 0);
   const driving = -analysis.deltaG;
   const dfFactor = Math.max(0.05, Math.min(1, (driving + 0.3) / B.drivingForceRef));
-  let kcatMul = site.kcatMul, tShift = 0, tWMul = 1, pHShift = 0, pHWMul = 1, costAdd = signal.costAdd, volAdd = 0;
+  let kcatMul = site.kcatMul, tShift = 0, tWMul = 1, pHShift = 0, pHWMul = 1, costAdd = signal.costAdd, volAdd = 0, upkeepMul = 1, hill = 1;
   for (const d of domains) {
+    upkeepMul *= d.upkeepMul ?? 1; if (d.hill) hill = Math.max(hill, d.hill);
     kcatMul *= d.kcatMul ?? 1; tShift += d.tOptShift ?? 0; tWMul *= d.tWidthMul ?? 1;
     pHShift += d.pHShift ?? 0; pHWMul *= d.pHWidthMul ?? 1; costAdd += d.costAdd ?? 0; volAdd += d.volumeAdd ?? 0;
   }
@@ -61,11 +63,11 @@ export function buildEnzyme(spec, id = null) {
   const inhibitors = {};
   const main = Object.keys(prods).find((m) => !MET[m]?.cofactor && MET[m]);
   if (main && !secreted) inhibitors[main] = domains.some((d) => d.feedback) ? 0.3 : 1.5;
-  if ('n2' in subs) inhibitors.o2 = 0.0015;
+  if ('n2' in subs && !domains.some((d) => d.o2Tolerant)) inhibitors.o2 = 0.0015;
   if (secreted && main) delete inhibitors[main];
   const costMul = site.costMul * (1 + costAdd) * (1 + 0.08 * stoichSum);
   const def = {
-    id: id || spec.id || `perso_${Date.now().toString(36)}`,
+    id: id || spec.id || `perso_${Date.now().toString(36)}${(++idCounter).toString(36)}`,
     name: spec.name || 'Enzyme personnalisée',
     category: 'Enzymes personnalisées',
     description: describe(subs, prods),
@@ -76,13 +78,16 @@ export function buildEnzyme(spec, id = null) {
     cofactors: [...provides].filter((p) => p !== 'light'),
     inhibitors,
     regulation: regs[0] || null,
+    hill,
     feedback: domains.some((d) => d.feedback),
-    cost: { synth: +(B.synth * costMul).toPrecision(3), upkeep: +(B.upkeep * costMul).toPrecision(3), volume: +(B.volume + volAdd).toPrecision(3) },
+    cost: { synth: +(B.synth * costMul).toPrecision(3), upkeep: +(B.upkeep * costMul * upkeepMul).toPrecision(3), volume: +(B.volume + volAdd).toPrecision(3) },
     custom: true,
     bricks: { activeSite: site.id, domains: domains.map((d) => d.id), signal: signal.id, tradeoff: t },
   };
   if (dfFactor < 0.5 && analysis.exergonic) warnings.push(`Réaction proche de l'équilibre (ΔG = ${analysis.deltaG.toFixed(2)} ATP-éq.) : elle sera lente.`);
   if (analysis.exergonic && driving > 4 && !usesAtp && !usesNad) warnings.push(`${driving.toFixed(1)} ATP-éq. sont dissipés en chaleur : couplez la réaction à de l'ATP ou du NADH pour les récupérer.`);
+  if (hill > 1 && secreted) warnings.push('La coopérativité est peu utile pour une enzyme sécrétée (substrat très dilué).');
+  if (domains.some((d) => d.o2Tolerant) && !('n2' in subs)) warnings.push("Le centre protégé n'a d'effet que sur les réactions sensibles à l'O₂ (fixation de N₂).");
   return { ok: errors.length === 0, def, errors, warnings, analysis };
 }
 
@@ -95,4 +100,18 @@ function clean(side) {
 export function describe(subs, prods) {
   const f = (side) => Object.entries(side).map(([m, n]) => `${n !== 1 ? n + ' ' : ''}${MET[m]?.name || m}`).join(' + ') || '∅';
   return `${f(subs)} → ${f(prods)}`;
+}
+
+/** Spécification de départ à partir d'une enzyme de la bibliothèque (domaines requis déduits). */
+export function specFromEnzyme(e) {
+  const all = { ...e.substrates, ...e.products };
+  const domains = [];
+  if ('nad' in all || 'nadh' in all) domains.push('nad');
+  if ('atp' in all) domains.push('atp');
+  if ('light' in e.substrates) domains.push('antenne');
+  if (e.regulation === 'atpHigh') domains.push('atp_haut');
+  if (e.regulation === 'atpLow') domains.push('atp_bas');
+  const sig = { cytosol: 'cytosol', mitochondrie: 'mts', chloroplaste: 'ctp', membrane: 'tm', secrete: 'sec' }[e.location] || 'cytosol';
+  if (e.bricks) return { name: `${e.name} (variante)`, substrates: { ...e.substrates }, products: { ...e.products }, activeSite: e.bricks.activeSite, domains: [...e.bricks.domains], signal: e.bricks.signal, tradeoff: e.bricks.tradeoff };
+  return { name: `${e.name.split(' (')[0]} (variante)`, substrates: { ...e.substrates }, products: { ...e.products }, activeSite: 'standard', domains, signal: sig, tradeoff: 0 };
 }

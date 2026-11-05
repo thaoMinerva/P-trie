@@ -158,3 +158,35 @@ test('mutations bornées et normalisées', () => {
   const ph = computePhenotype(d, new World({ seed: 1 }).registry);
   assert.ok(ph.B0 > 0 && Number.isFinite(ph.upkeep));
 });
+
+import { buildOrganelle } from '../src/simulation/organelleDesign.js';
+
+test('atelier d\'organites : un organite respiratoire personnalisé remplace les mitochondries', () => {
+  const bad = buildOrganelle({ name: 'x', membrane: 'coque', size: 0.03, modules: ['respiration'] });
+  assert.equal(bad.ok, false, 'la respiration exige une double membrane');
+  const r = buildOrganelle({ name: 'Mito géante', membrane: 'double', size: 0.06, modules: ['respiration'], max: 4 });
+  assert.ok(r.ok, r.errors.join(', '));
+  const w = new World({ seed: 11 });
+  const base = { ...defaultDesign(), type: 'eucaryote', shape: { kind: 'coque', size: 3 },
+    organelles: { noyau: 1, ribosomes: 2, vacuole_contractile: 1, [r.def.id]: 2 }, customOrganelles: [r.def] };
+  const ph = computePhenotype(normalizeDesign(base), w.registry);
+  assert.ok(Math.abs(ph.mitoFactor - 2 * r.def.effects.capacities.mitochondrie) < 1e-9);
+  const pop = w.addPopulation(base, {});
+  for (let i = 0; i < 100; i++) w.step();
+  assert.ok(pop.count > 0);
+  const w2 = deserializeWorld(JSON.parse(JSON.stringify(serializeWorld(w))));
+  assert.equal(w2.cells.length, w.cells.length);
+});
+
+test('atelier : la coopérativité (Hill) rend la réponse sigmoïde', () => {
+  const base = { substrates: { pyruvate: 1, nadh: 1 }, products: { lactate: 1, nad: 1 } };
+  const mm = buildEnzyme({ ...base, domains: ['nad'] }).def;
+  const hill = buildEnzyme({ ...base, domains: ['nad', 'hill'] }).def;
+  assert.equal(hill.hill, 2);
+  const w = new World({ seed: 1 });
+  w.registry.register(mm); w.registry.register(hill);
+  const d = (id) => normalizeDesign({ ...defaultDesign(), enzymes: { [id]: 1 }, customEnzymes: [id === mm.id ? mm : hill] });
+  const sub = (id) => computePhenotype(d(id), w.registry).enzymes[0].subs.find((s) => s.m === 'pyruvate');
+  assert.equal(sub(mm.id).hill, 1);
+  assert.equal(sub(hill.id).hill, 2);
+});
