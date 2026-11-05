@@ -165,13 +165,18 @@ export function computePhenotype(design, registry) {
   if (env.parasite) massPerV += ENVELOPE.parasite.mass;
   if (env.adhesins) massPerV += ENVELOPE.adhesins.mass;
 
+  // Encombrement moléculaire : au-delà de 70 % du volume occupé, la diffusion ralentit et les enzymes
+  // se gênent (pas de limite dure, mais un rendement qui chute ; 100 % reste physiquement impossible).
+  const crowding = volUsed <= 0.7 ? 1 : Math.max(0.1, 1 - (volUsed - 0.7) * 2.5);
+  if (crowding < 1) for (const e of enzymes) e.vmax *= crowding;
+
   const structural = V * C.biomassDensity * (1 - fx.cheapVolume);
   const B0 = structural + massPerV * V + wallMass + capsuleMass;
   const upkeep = C.maintenance * V * (1 - fx.cheapVolume * 0.8) + upkeepPerV * V + motilityCost;
 
   return {
     geo, V, SA, sv, euk, radius: geo.radius,
-    B0, upkeep, volUsed, enzymes, warnings,
+    B0, upkeep, volUsed, crowding, enzymes, warnings,
     atpCap: C.atpCapPerVolume * V,
     nadTotal: C.nadPerVolume * V,
     storageCap: (C.storageBase + fx.storage) * V,

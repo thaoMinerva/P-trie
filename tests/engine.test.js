@@ -248,3 +248,38 @@ test('multijoueur : une enzyme trafiquée est reconstruite à partir de ses briq
   assert.ok(e.id.startsWith('j_test01:') && d.enzymes[e.id] === 1, 'identifiant préfixé par le joueur');
   assert.throws(() => sanitizeDesign({ ...defaultDesign(), enzymes: { x: 1 }, customEnzymes: [{ id: 'x', name: 'magique', substrates: { co2: 1 }, products: { glucose: 1 }, bricks: {} }] }, 'j_test01'));
 });
+
+import { computeGeometry } from '../src/simulation/geometry.js';
+import { LIVRET } from '../src/data/index.js';
+
+test('géométrie : volumes 3D exacts et dépendants de la forme', () => {
+  const near = (a, b, tol = 0.02) => assert.ok(Math.abs(a - b) / b < tol, `${a} ≉ ${b}`);
+  near(computeGeometry({ kind: 'coque', size: 2 }).volume, (4 / 3) * Math.PI * 8);
+  // bacille de rayon 1 et d'allongement 3 : cylindre de longueur 4 + deux demi-sphères
+  near(computeGeometry({ kind: 'bacille', size: 1, aspect: 3 }).volume, Math.PI * 4 + (4 / 3) * Math.PI);
+  // ellipsoïde allongé a = 2, b = 1
+  near(computeGeometry({ kind: 'ovale', size: 1, aspect: 2 }).volume, (4 / 3) * Math.PI * 2);
+  // allonger une cellule augmente son volume et sa surface
+  const v = [1, 2, 4].map((aspect) => computeGeometry({ kind: 'bacille', size: 1, aspect }));
+  assert.ok(v[0].volume < v[1].volume && v[1].volume < v[2].volume);
+  assert.ok(v[0].surface < v[1].surface && v[1].surface < v[2].surface);
+  assert.ok(computeGeometry({ kind: 'spirille', size: 0.6, aspect: 4 }).sv > computeGeometry({ kind: 'coque', size: 0.6 }).sv);
+});
+
+test('encombrement : plus de limite dure à 85 %, mais les enzymes ralentissent', () => {
+  const reg = new World({ seed: 1 }).registry;
+  const d = { ...defaultDesign(), enzymes: { ...defaultDesign().enzymes } };
+  let a = analyzeDesign(d, reg);
+  while (a.ph.volUsed < 0.88) { for (const k of Object.keys(d.enzymes)) d.enzymes[k] *= 1.05; a = analyzeDesign(d, reg); }
+  assert.ok(a.ph.volUsed > 0.85 && a.ph.volUsed < 1, `volUsed=${a.ph.volUsed}`);
+  assert.ok(!a.errors.some((e) => e.includes('volume')));
+  assert.ok(a.ph.crowding < 1);
+});
+
+test('livret : identifiants uniques et liens internes valides', () => {
+  const ids = LIVRET.flatMap((c) => c.sections.map((s) => s.id));
+  assert.equal(new Set(ids).size, ids.length);
+  for (const c of LIVRET) for (const s of c.sections) for (const p of [s.short, ...s.body]) {
+    for (const m of p.matchAll(/\[\[([a-z0-9_]+)\|/g)) assert.ok(ids.includes(m[1]), `lien inconnu ${m[1]} dans ${s.id}`);
+  }
+});

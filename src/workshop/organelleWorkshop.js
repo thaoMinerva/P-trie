@@ -2,6 +2,7 @@
 import { ORG_BRICKS, ORGANELLES } from '../data/index.js';
 import { buildOrganelle, emptyOrganelleSpec, MODULE } from '../simulation/organelleDesign.js';
 import { h, clear, fmt, toast } from '../ui/dom.js';
+import { help } from '../ui/help.js';
 
 const EFFECT_LABELS = {
   'capacities.mitochondrie': (v) => `capacité respiratoire +${fmt(v, 3)} (une mitochondrie : 0,12)`,
@@ -32,13 +33,13 @@ export class OrganelleWorkshop {
     clear(this.root).append(h('div', { class: 'workshop-grid' },
       h('div', { class: 'ws-left' },
         h('section', { class: 'card' },
-          h('h3', {}, '1 · Identité'),
+          h('h3', {}, '1 · Identité ', help('organites')),
           h('label', { class: 'row' }, h('span', {}, 'Nom'), h('input', { type: 'text', value: s.name, oninput: (e) => { s.name = e.target.value; } , onchange: () => this.render() })),
           h('label', { class: 'row' }, h('span', {}, 'Couleur'), h('input', { type: 'color', value: s.color, oninput: (e) => { s.color = e.target.value; this.drawPreview(); } })),
           h('label', { class: 'row' }, h('span', {}, 'Partir de'), h('select', { onchange: (e) => { const o = builtin[+e.target.value]; if (o) { this.fromBuiltin(o); } } },
             h('option', { value: '' }, '— un organite existant —'), builtin.map((o, i) => h('option', { value: i }, o.name))))),
         h('section', { class: 'card' },
-          h('h3', {}, '2 · Enveloppe'),
+          h('h3', {}, '2 · Enveloppe ', help('endosymbiose')),
           h('div', { class: 'brick-grid' }, ORG_BRICKS.membranes.map((m) => h('button', { class: `brick ${s.membrane === m.id ? 'on' : ''}`, style: { '--c': '#48cae4' }, title: m.description, onclick: () => { s.membrane = m.id; this.render(); } },
             h('span', { class: 'brick-name' }, m.name), h('span', { class: 'brick-sub' }, `${m.types.length === 2 ? 'procaryotes et eucaryotes' : 'eucaryotes'} · masse ×${m.massMul}`))))),
         h('section', { class: 'card' },

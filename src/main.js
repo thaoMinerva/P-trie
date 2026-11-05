@@ -16,6 +16,9 @@ import { Workshop } from './workshop/workshop.js';
 import { OrganelleWorkshop } from './workshop/organelleWorkshop.js';
 import { EnvelopeWorkshop } from './workshop/envelopeWorkshop.js';
 import { h, $, $$, fmt, fmtTime, toast } from './ui/dom.js';
+import { help, setLivretOpener } from './ui/help.js';
+import { Livret } from './ui/livret.js';
+import { ChatPanel } from './ui/chat.js';
 
 const W = PARAMS.world;
 const app = { world: null, ghosts: null, speed: 1, tab: 'monde' };
@@ -98,7 +101,11 @@ async function saveAll(quiet = true) {
 }
 
 // ------------------------------------------------------------------ interface
-let view, editor, workshop, orgWorkshop, envWorkshop, journalDirty = true, selected = null;
+let view, editor, workshop, orgWorkshop, envWorkshop, livret, journalDirty = true, selected = null;
+
+// Calque affiché → section du livret qui l'explique
+const LAYER_HELP = { glucose: 'glycolyse', o2: 'respiration', co2: 'photosynthese', nh4: 'azote', light: 'lumiere', temperature: 'temperature_ph', ph: 'ph', salinity: 'osmose',
+  phosphate: 'adn_arn', protein: 'decomposeurs', aa: 'azote', starch: 'reserves', cellulose: 'decomposeurs', lactate: 'fermentation', ethanol: 'fermentation', acetate: 'fermentation', toxin: 'toxines', secreted: 'enzymes_secretees' };
 
 function setup() {
   const canvas = $('#world-canvas');
@@ -109,8 +116,15 @@ function setup() {
 
   const layerSel = $('#layer-select');
   for (const [k, l] of Object.entries(LAYERS)) layerSel.append(h('option', { value: k, selected: k === view.layer }, l.name));
-  layerSel.addEventListener('change', () => { view.layer = layerSel.value; view.frame = 0; updateLegend(); refreshRemoteLayer(); });
-  updateLegend();
+  const layerHelp = () => $('#layer-help').replaceChildren(help(LAYER_HELP[view.layer] || 'milieu'));
+  layerSel.addEventListener('change', () => { view.layer = layerSel.value; view.frame = 0; updateLegend(); refreshRemoteLayer(); layerHelp(); });
+  updateLegend(); layerHelp();
+  $$('[data-help]').forEach((el) => el.replaceWith(help(el.dataset.help)));
+
+  livret = new Livret($('#livret-root'));
+  setLivretOpener((id) => { showTab('livret'); livret.open(id); });
+  const chat = new ChatPanel($('#chat'), { world: app.world, me: identity });
+  chat.onToggle = () => requestAnimationFrame(() => view.resize());
 
   $$('.tab').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   $$('.speed').forEach((b) => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));

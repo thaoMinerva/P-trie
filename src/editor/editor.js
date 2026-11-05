@@ -10,6 +10,7 @@ import { launchCost } from '../game/progression.js';
 import { drawCellDetailed, layoutOrganelles } from '../ui/cellDraw.js';
 import { lineChart } from '../ui/charts.js';
 import { h, clear, fmt, toast } from '../ui/dom.js';
+import { help } from '../ui/help.js';
 
 const C = PARAMS.cell;
 
@@ -121,7 +122,7 @@ export class Editor {
       ...ARCHETYPES.map((a) => ({ label: `${a.names[0]} — ${a.profile}`, design: { ...a.design, name: a.names[0], color: '#4ea8de' } })),
       ...this.ctx.progression.p.designs.map((s) => ({ label: `Ma conception : ${s.name}`, design: s.design })),
     ];
-    return card('Identité et type cellulaire',
+    return card(['Identité et type cellulaire ', help('procaryote_eucaryote')],
       intro('Donnez un nom à votre organisme, ou partez d\'un modèle déjà viable pour gagner du temps.'),
       row('Nom', h('input', { type: 'text', value: d.name, maxlength: 40, oninput: (e) => { d.name = e.target.value; this.change(); } })),
       row('Couleur', h('input', { type: 'color', value: d.color, oninput: (e) => { d.color = e.target.value; this.change(); } })),
@@ -146,18 +147,18 @@ export class Editor {
     const [smin, smax] = d.type === 'eucaryote' ? [C.eukSizeMin, C.eukSizeMax] : [C.prokSizeMin, C.prokSizeMax];
     const shapeText = { coque: 'Compacte : rapport surface/volume le plus faible.', bacille: 'Bâtonnet : bon compromis, facile à allonger.', spirille: 'Hélice fine : énorme surface d\'échange, mais fragile.', ovale: 'Ellipse : intermédiaire entre coque et bacille.', libre: 'Dessinez votre contour (points de contrôle dans l\'aperçu).' };
     const ph = this.analysis?.ph;
-    return card('Forme et taille',
-      intro('La taille fixe le volume (ce qu\'il faut construire) ; la forme fixe la surface (vitesse d\'échange avec le milieu). Un grand rapport surface/volume = nutriments captés plus vite.'),
+    return card(['Forme et taille ', help('surface_volume')],
+      intro('Le volume est ce qu\'il faut construire et entretenir ; la surface est la porte d\'entrée des nutriments. Allonger la cellule augmente les deux, mais une forme fine garde un grand rapport surface/volume = nutriments captés plus vite.'),
       h('div', { class: 'choice-grid' }, Object.entries(SHAPES).map(([k, v]) => choice(d.shape.kind === k, v, shapeText[k], () => {
         d.shape.kind = k;
         if (k === 'libre' && !d.shape.points) d.shape.points = [[1, 0], [0.6, 0.7], [-0.2, 0.9], [-0.9, 0.3], [-0.8, -0.5], [0.1, -0.8], [0.7, -0.6]];
         d.organellePositions = {};
         this.change(true);
       }))),
-      slider('Taille (rayon équivalent)', d.shape.size, smin, smax, 0.05, (v) => { d.shape.size = v; this.change(); }, (v) => `${fmt(v, 2)} µm`),
+      slider({ coque: 'Rayon', bacille: 'Demi-largeur', spirille: 'Épaisseur (échelle)', ovale: 'Demi-petit axe', libre: 'Rayon équivalent' }[d.shape.kind] || 'Taille', d.shape.size, smin, smax, 0.05, (v) => { d.shape.size = v; this.change(); }, (v) => `${fmt(v, 2)} µm`),
       ['bacille', 'spirille', 'ovale'].includes(d.shape.kind) ? slider('Allongement', d.shape.aspect, 1, 6, 0.1, (v) => { d.shape.aspect = v; d.organellePositions = {}; this.change(); }, (v) => `×${fmt(v, 1)}`) : null,
       d.shape.kind === 'libre' ? h('div', { class: 'msg info' }, 'ℹ️ Dans l\'aperçu : glissez les points blancs, double-cliquez pour en ajouter, clic droit pour en retirer.') : null,
-      ph ? h('div', { class: 'kv' }, kv('Volume', `${fmt(ph.V, 2)} µm³`), kv('Surface', `${fmt(ph.SA, 1)} µm²`), kv('Rapport S/V', `${fmt(ph.sv, 2)} µm⁻¹`)) : null);
+      ph ? h('div', { class: 'kv' }, kv(['Volume ', help('volume_cellule')], `${fmt(ph.V, 2)} µm³`), kv('Surface', `${fmt(ph.SA, 1)} µm²`), kv('Rapport S/V', `${fmt(ph.sv, 2)} µm⁻¹`)) : null);
   }
 
   step_enveloppe(d) {
@@ -169,7 +170,7 @@ export class Editor {
     const ph = this.analysis?.ph;
     const memFrac = ph ? ph.membraneUsed : 0;
     return h('div', { class: 'stack' },
-      card('Paroi',
+      card(['Paroi ', help('paroi')],
         intro('La paroi protège (prédateurs, osmose, toxines) mais ralentit les échanges et coûte de la biomasse. Son matériau décide aussi quelles enzymes lytiques peuvent la détruire. Créez vos propres parois dans l\'Atelier d\'enveloppe.'),
         slider('Épaisseur de paroi', d.envelope.wall, 0, 1, 0.01, (v) => { d.envelope.wall = v; this.change(); }, (v) => v ? fmt(v, 2) : 'aucune'),
         d.type === 'eucaryote' ? h('p', { class: 'small muted' }, 'Au-delà de 0,08, la phagocytose devient impossible.') : null,
@@ -183,7 +184,7 @@ export class Editor {
           toggleCard(d.envelope.capsule, 'Capsule', ENVELOPE.capsule.description, (v) => { d.envelope.capsule = v; this.change(true); }),
           toggleCard(d.envelope.parasite, 'Suçoir (parasitisme)', ENVELOPE.parasite.description, (v) => { d.envelope.parasite = v; this.change(true); }),
           toggleCard(d.envelope.adhesins, 'Adhésines symbiotiques', ENVELOPE.adhesins.description, (v) => { d.envelope.adhesins = v; this.change(true); }))),
-      card('Protéines membranaires',
+      card(['Protéines membranaires ', help('transporteurs')],
         intro('Transporteurs (capturent mieux un nutriment), pompes d\'efflux (expulsent toxines ou déchets contre de l\'ATP), porines (accélèrent les échanges passifs). Elles occupent la surface de la membrane.'),
         h('div', { class: 'bar' }, h('span', { class: 'bar-label' }, 'Membrane'), h('span', { class: 'bar-track' }, h('span', { class: 'bar-fill', style: { width: `${Math.min(1, memFrac) * 100}%`, background: memFrac > 1 ? '#e63946' : memFrac > 0.8 ? '#f8961e' : '#43aa8b' } })), h('span', { class: 'bar-val' }, `${Math.round(memFrac * 100)} / 100 %`)),
         prots.map((m) => {
@@ -201,7 +202,7 @@ export class Editor {
           }
           return r;
         })),
-      card('Mobilité',
+      card(['Mobilité ', help('mobilite')],
         h('div', { class: 'choice-grid' }, motOpts.map(([k, m]) => choice(d.envelope.motility === k, m.name, m.description || 'Se laisse porter par l\'agitation moléculaire. Gratuit.', () => { d.envelope.motility = k; d.envelope.motilityUnits = 1; this.change(true); }))),
         d.envelope.motility !== 'aucune' ? slider('Nombre / densité', d.envelope.motilityUnits, 1, ENVELOPE.motility[d.envelope.motility].maxUnits, 1, (v) => { d.envelope.motilityUnits = v; this.change(); }, (v) => `${v}`) : null));
   }
@@ -214,7 +215,7 @@ export class Editor {
 
   step_organites(d) {
     const list = this.organelleList();
-    return card('Organites',
+    return card(['Organites ', help('organites')],
       intro('Chaque organite occupe du volume, coûte de la biomasse et de l\'ATP d\'entretien, et apporte une fonction. Les organites personnalisés se créent dans l\'Atelier d\'organites.'),
       h('div', { class: 'org-grid' }, list.map((o) => {
         const n = d.organelles[o.id] || 0, req = o.required?.includes(d.type);
@@ -254,7 +255,7 @@ export class Editor {
     }
     const search = h('input', { type: 'search', placeholder: 'Rechercher une enzyme (glucose, azote, lumière…)', value: this.enzFilter, class: 'search', oninput: (ev) => { this.enzFilter = ev.target.value; const pos = ev.target.selectionStart; this.renderStep(); const s = this.main.querySelector('.search'); s.focus(); s.setSelectionRange(pos, pos); } });
     return h('div', { class: 'stack' },
-      card('Kits métaboliques',
+      card(['Kits métaboliques ', help('metabolisme')],
         intro('Un clic ajoute un ensemble d\'enzymes qui fonctionnent ensemble. Vous pourrez ensuite ajuster chaque concentration ci-dessous.'),
         h('div', { class: 'kit-grid' }, KITS.map((k) => {
           const has = Object.keys(k.enzymes).every((id) => d.enzymes[id] !== undefined);
@@ -265,7 +266,7 @@ export class Editor {
           } }, h('b', {}, (has ? '✓ ' : '+ ') + k.name), h('span', { class: 'small muted' }, k.desc));
         })),
         h('div', { class: 'btn-row' }, h('span', { class: 'small muted' }, `${chosen.length} enzyme(s) choisie(s)`), chosen.length ? h('button', { class: 'btn small danger', onclick: () => { d.enzymes = {}; this.change(true); } }, 'Tout retirer') : null)),
-      card('Enzymes une par une',
+      card(['Enzymes une par une ', help('michaelis')],
         intro('Plus une enzyme est concentrée, plus sa voie est rapide, mais plus elle coûte en volume, en biomasse à synthétiser et en ATP d\'entretien. Survolez une enzyme pour voir ses paramètres.'),
         search, listBox));
   }
@@ -290,11 +291,11 @@ export class Editor {
   step_test() {
     const a = this.analysis, ph = a.ph;
     return h('div', { class: 'stack' },
-      card('Bilan de viabilité',
+      card(['Bilan de viabilité ', help('atp')],
         h('div', { class: 'grid2' },
           h('div', { class: 'kv' },
             kv('Volume · surface', `${fmt(ph.V, 2)} µm³ · ${fmt(ph.SA, 1)} µm²`),
-            kv('Rapport S/V', `${fmt(ph.sv, 2)} µm⁻¹ ${ph.sv > 2 ? '(échanges rapides)' : ph.sv < 0.8 ? '(échanges lents)' : ''}`),
+            kv(['Rapport S/V ', help('surface_volume')], `${fmt(ph.sv, 2)} µm⁻¹ ${ph.sv > 2 ? '(échanges rapides)' : ph.sv < 0.8 ? '(échanges lents)' : ''}`),
             kv('Biomasse à construire (B₀)', `${fmt(ph.B0, 2)} u`),
             kv('Entretien', `${fmt(ph.upkeep, 3)} ATP/s`)),
           h('div', { class: 'kv' },
@@ -338,11 +339,11 @@ export class Editor {
   renderSide() {
     const a = this.analysis || this.analyze();
     const ph = a.ph;
-    const volFrac = ph.volUsed / 0.85;
+    const volFrac = ph.volUsed;
     clear(this.sideInfo).append(
       h('section', { class: 'card' },
-        h('h3', {}, 'Viabilité'),
-        h('div', { class: 'bar' }, h('span', { class: 'bar-label' }, 'Volume'), h('span', { class: 'bar-track' }, h('span', { class: 'bar-fill', style: { width: `${Math.min(1, volFrac) * 100}%`, background: volFrac > 1 ? '#e63946' : volFrac > 0.82 ? '#f8961e' : '#43aa8b' } })), h('span', { class: 'bar-val' }, `${Math.round(ph.volUsed * 100)} / 85 %`)),
+        h('h3', {}, 'Viabilité ', help('encombrement')),
+        h('div', { class: 'bar' }, h('span', { class: 'bar-label' }, 'Volume'), h('span', { class: 'bar-track' }, h('span', { class: 'bar-fill', style: { width: `${Math.min(1, volFrac) * 100}%`, background: volFrac > 1 ? '#e63946' : volFrac > 0.7 ? '#f8961e' : '#43aa8b' } })), h('span', { class: 'bar-val' }, `${Math.round(ph.volUsed * 100)} %${ph.crowding < 1 ? ` · enzymes ${Math.round(ph.crowding * 100)} %` : ''}`)),
         h('div', { class: 'kv' },
           kv('Biomasse à construire', `${fmt(ph.B0, 2)} u`),
           kv('Entretien', `${fmt(ph.upkeep, 3)} ATP/s`),
@@ -367,7 +368,7 @@ export class Editor {
     const preySel = h('label', { class: 'small' }, h('input', { type: 'checkbox', checked: this.bench?.withPrey }), ' ajouter des proies (bactéries)');
     const out = h('div', {});
     const chart = h('canvas', { class: 'chart small' });
-    const c = card('Banc d\'essai',
+    const c = card(['Banc d\'essai ', help('selection')],
       intro('Fait vivre 4 fondateurs pendant 2 minutes simulées dans un milieu constant, avec le vrai moteur.'),
       h('div', { class: 'btn-row' }, sel, h('button', { class: 'btn primary', disabled: this.analysis.errors.length > 0, onclick: () => {
         out.textContent = 'Simulation en cours…';

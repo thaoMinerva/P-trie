@@ -18,6 +18,7 @@
       <button class="tab" data-tab="enveloppe">🧱 Atelier d'enveloppe</button>
       <button class="tab" data-tab="populations">📈 Populations</button>
       <button class="tab" data-tab="archives">🗄️ Archives</button>
+      <button class="tab" data-tab="livret">📖 Livret</button>
     </nav>
     <div class="hud">
       <span class="pill points" title="Points de conception">⭐ <b id="hud-points">0</b> pts</span>
@@ -37,11 +38,13 @@
   <main>
     <section class="view on" id="view-monde">
       <div class="world-layout">
+        <aside class="chat" id="chat"></aside>
         <div class="world-main">
           <div class="canvas-wrap">
             <canvas id="world-canvas"></canvas>
             <div class="map-tools">
               <label>Calque <select id="layer-select"></select></label>
+              <span id="layer-help"></span>
               <button class="btn small" id="btn-fit">⤢ Recadrer</button>
             </div>
             <div class="map-scale" id="map-scale"></div>
@@ -50,8 +53,8 @@
           <div class="chart-wrap"><canvas id="world-chart" class="chart"></canvas></div>
         </div>
         <aside class="sidebar">
-          <section class="card"><h3>Populations vivantes</h3><div id="mini-pops"></div></section>
-          <section class="card"><h3>Fiche de la cellule</h3><div id="cell-sheet"><div class="muted">Cliquez sur une cellule pour afficher sa fiche.</div></div></section>
+          <section class="card"><h3>Populations vivantes <span data-help="interactions"></span></h3><div id="mini-pops"></div></section>
+          <section class="card"><h3>Fiche de la cellule <span data-help="cellule"></span></h3><div id="cell-sheet"><div class="muted">Cliquez sur une cellule pour afficher sa fiche.</div></div></section>
           <section class="card"><h3>Journal</h3><div id="journal" class="journal"></div></section>
           <section class="card">
             <h3>Partie</h3>
@@ -71,6 +74,7 @@
     <section class="view" id="view-enveloppe"><div id="envelope-root"></div></section>
     <section class="view" id="view-populations"><div id="populations-root" class="page"></div></section>
     <section class="view" id="view-archives"><div id="archives-root" class="page"></div></section>
+    <section class="view" id="view-livret"><div id="livret-root"></div></section>
   </main>
   <script type="module" src="src/main.js"></script>
 </body>

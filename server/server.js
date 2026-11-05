@@ -28,6 +28,8 @@ const SPEED = Number(process.env.PETRI_SPEED || 1); // vitesse du monde partagé
 let world, ghosts;
 const players = new Map(); // id → { id, name, points, totalEarned, lastSeen }
 const clients = new Set(); // { res, playerId, sentAt }
+let chat = []; // derniers messages { id, playerId, name, text, at, system? }
+let chatSeq = 0;
 
 function wire() {
   world.on('points', (pop, gain) => {
@@ -47,6 +49,7 @@ async function load() {
     ghosts = new GhostWorldSource({ seed: world.seed });
     ghosts.deserialize(data.ghosts);
     for (const p of data.players || []) players.set(p.id, p);
+    chat = (data.chat || []).slice(-100); chatSeq = chat.reduce((m, c) => Math.max(m, c.id || 0), 0);
     console.log(`Monde restauré (${world.cells.length} cellules, t = ${Math.round(world.time)} s, ${players.size} joueurs connus).`);
   } catch {
     world = new World({ seed: (Date.now() % 1e9) | 0 });
@@ -60,7 +63,7 @@ async function load() {
 async function save() {
   await mkdir(join(root, 'server', 'data'), { recursive: true });
   const tmp = SAVE + '.tmp';
-  await writeFile(tmp, JSON.stringify({ world: serializeWorld(world), ghosts: ghosts.serialize(), players: [...players.values()], savedAt: Date.now() }));
+  await writeFile(tmp, JSON.stringify({ world: serializeWorld(world), ghosts: ghosts.serialize(), players: [...players.values()].map(({ chatTimes, ...p }) => p), chat, savedAt: Date.now() }));
   await rename(tmp, SAVE);
 }
 
@@ -87,6 +90,13 @@ function clientsOf(id) { return [...clients].filter((c) => c.playerId === id); }
 function sendTo(id, event, data) { for (const c of clientsOf(id)) sse(c.res, event, data); }
 
 const b64 = (arr) => Buffer.from(new Float32Array(arr).buffer).toString('base64');
+
+function pushChat(m) {
+  m = { id: ++chatSeq, at: Date.now(), ...m };
+  chat.push(m); if (chat.length > 100) chat.shift();
+  broadcast('chat', m);
+  return m;
+}
 
 function popPayload(p, withHistory) {
   return {
@@ -157,14 +167,18 @@ const api = {
       playerId: pl.id, name: pl.name, points: pl.points, totalEarned: pl.totalEarned,
       world: { width: world.width, height: world.height, gw: env.gw, gh: env.gh, cellSize: env.cellSize, gridVolume: env.gridVolume,
         temperature: b64(env.temperature), salinity: b64(env.salinity), lightDepth: b64(env.lightDepth) },
-      events: world.events.slice(-40), speed: SPEED,
+      events: world.events.slice(-40), speed: SPEED, chat,
     });
     sse(res, 'pops', { pops: [...world.populations.values()].map((p) => popPayload(p, true)), users: usersPayload() });
     sse(res, 'state', statePayload());
     const c = { res, playerId: pl.id };
+    const already = clientsOf(pl.id).length > 0;
     clients.add(c);
-    world.log(`${pl.name} a rejoint le monde partagé.`, 'ghost');
-    req.on('close', () => { clients.delete(c); if (!clientsOf(pl.id).length) world.log(`${pl.name} s'est déconnecté(e).`, 'ghost'); });
+    if (!already) { world.log(`${pl.name} a rejoint le monde partagé.`, 'ghost'); pushChat({ system: true, text: `${pl.name} a rejoint le monde.` }); }
+    req.on('close', () => {
+      clients.delete(c);
+      if (!clientsOf(pl.id).length) { world.log(`${pl.name} s'est déconnecté(e).`, 'ghost'); pushChat({ system: true, text: `${pl.name} est parti(e).` }); }
+    });
   },
 
   'POST /api/launch': async (req, res) => {
@@ -186,6 +200,21 @@ const api = {
     sendTo(pl.id, 'points', { points: pl.points, totalEarned: pl.totalEarned, gain: -cost });
     broadcast('pops', { pops: [popPayload(pop, true)], users: usersPayload(), partial: true });
     json(res, 200, { ok: true, popId: pop.id, points: pl.points, cost });
+  },
+
+  'POST /api/chat': async (req, res) => {
+    const b = await body(req);
+    const pl = players.get(b.player);
+    if (!pl || !clientsOf(pl.id).length) return json(res, 403, { ok: false, error: 'Joueur inconnu ou déconnecté : rechargez la page.' });
+    // eslint-disable-next-line no-control-regex
+    const text = String(b.text || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 300);
+    if (!text) return json(res, 400, { ok: false, error: 'Message vide.' });
+    const now = Date.now();
+    pl.chatTimes = (pl.chatTimes || []).filter((t) => now - t < 10000);
+    if (pl.chatTimes.length >= 5) return json(res, 429, { ok: false, error: 'Doucement : 5 messages par 10 secondes au maximum.' });
+    pl.chatTimes.push(now);
+    pushChat({ playerId: pl.id, name: pl.name, text });
+    json(res, 200, { ok: true });
   },
 
   'POST /api/abandon': async (req, res) => {

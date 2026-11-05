@@ -5,6 +5,7 @@ import { CAUSES } from '../simulation/metabolism.js';
 import { RES_LABELS } from '../simulation/population.js';
 import { PARAMS } from '../data/index.js';
 import { isMine, identity } from '../game/identity.js';
+import { help } from './help.js';
 
 const resName = (r) => (r === 'light' ? 'lumière' : RES_LABELS[r] || r);
 
@@ -36,7 +37,7 @@ export function renderPopulations(root, world, progression, ghostSource, actions
   root.append(
     h('div', { class: 'grid2' },
       h('section', { class: 'card' },
-        h('h3', {}, 'Progression'),
+        h('h3', {}, 'Progression ', help('selection')),
         h('div', { class: 'stat-row' },
           stat('Points disponibles', fmt(progression.points, 1)),
           stat('Points gagnés au total', fmt(progression.totalEarned, 1)),
@@ -48,7 +49,7 @@ export function renderPopulations(root, world, progression, ghostSource, actions
         h('p', { class: 'small muted' }, identity.multiplayer ? 'Vrais joueurs connectés au serveur, plus quelques populations fantômes pour animer le monde.' : 'Ces « joueurs » sont générés localement (mode solo). Lancez « npm run multi » pour jouer à plusieurs.'),
         h('div', { class: 'users' }, ghostSource.users().filter((u) => u.id !== identity.id).map((u) => h('div', { class: 'user' },
           h('span', { class: `dot ${u.online ? 'on' : 'off'}` }), h('b', {}, u.name), h('span', { class: 'muted small' }, ` · ${u.profile} · ${u.online ? 'en ligne' : 'hors ligne'}`)))))),
-    h('section', { class: 'card' }, h('h3', {}, 'Effectifs dans le temps'), chart),
+    h('section', { class: 'card' }, h('h3', {}, 'Effectifs dans le temps ', help('cycle_cellulaire')), chart),
     h('section', { class: 'card' }, h('h3', {}, `Vos populations (${mine.length})`), popTable(mine, world, actions, true)),
     h('section', { class: 'card' }, h('h3', {}, `Populations des autres (${others.length})`), popTable(others, world, actions, false)),
   );

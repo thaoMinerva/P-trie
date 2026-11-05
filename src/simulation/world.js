@@ -40,7 +40,7 @@ export class World {
     this._sampleTimer = 0;
   }
 
-  on(type, fn) { this.listeners[type].push(fn); }
+  on(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); }
   emit(type, ...args) { for (const fn of this.listeners[type]) fn(...args); }
   log(text, kind = 'info', popId = null) {
     const ev = { t: +this.time.toFixed(1), text, kind, popId };

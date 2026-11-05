@@ -54,7 +54,8 @@ export class RemoteWorld {
     this.popOrder = [];
     this.events = [];
     this.time = 0;
-    this.listeners = { extinction: [], points: [], event: [], init: [], status: [] };
+    this.listeners = { extinction: [], points: [], event: [], init: [], status: [], chat: [] };
+    this.chat = [];
     this.registry = new EnzymeRegistry();
     this.usersList = [];
     this.connected = false;
@@ -76,6 +77,7 @@ export class RemoteWorld {
         this.width = d.world.width; this.height = d.world.height;
         this.env = new RemoteEnv(d.world);
         this.events = d.events || [];
+        if (first) this.chat = d.chat || [];
         this.connected = true;
         this.emit('status', true);
         this.emit('init', d);
@@ -89,6 +91,11 @@ export class RemoteWorld {
         const p = this.populations.get(s.id);
         if (p) p.update(s); else this.populations.set(s.id, new RemotePop(s));
         this.emit('extinction', this.populations.get(s.id));
+      });
+      es.addEventListener('chat', (e) => {
+        const m = JSON.parse(e.data);
+        this.chat.push(m); if (this.chat.length > 150) this.chat.shift();
+        this.emit('chat', m);
       });
       es.addEventListener('log', (e) => {
         const ev = JSON.parse(e.data);
@@ -165,6 +172,7 @@ export class RemoteWorld {
   }
   launch(design, x, y) { return this.post('/api/launch', { design, x, y }); }
   removePopulation(popId) { return this.post('/api/abandon', { popId }); }
+  sendChat(text) { return this.post('/api/chat', { text }); }
 
   /** Charge un champ du serveur pour le calque affiché. */
   async fetchLayer(name) {

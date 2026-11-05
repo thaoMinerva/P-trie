@@ -2,6 +2,7 @@
 import { WALL_DATA, MPROT_WORKSHOP, METABOLITES, MET } from '../data/index.js';
 import { buildWall, emptyWallSpec, buildMembraneProtein, emptyProteinSpec } from '../simulation/envelopeDesign.js';
 import { h, clear, toast } from '../ui/dom.js';
+import { help } from '../ui/help.js';
 
 const pct = (v) => `${Math.round(v * 100)} %`;
 
@@ -27,13 +28,13 @@ export class EnvelopeWorkshop {
     const s = this.wall;
     return h('div', { class: 'ws-left' },
       h('section', { class: 'card' },
-        h('h3', {}, '🧱 Paroi · 1 · Matériau de base'),
+        h('h3', {}, '🧱 Paroi · 1 · Matériau de base ', help('paroi')),
         h('label', { class: 'row' }, h('span', {}, 'Nom'), h('input', { type: 'text', value: s.name, oninput: (e) => { s.name = e.target.value; }, onchange: () => this.render() })),
         h('label', { class: 'row' }, h('span', {}, 'Couleur'), h('input', { type: 'color', value: s.color, oninput: (e) => { s.color = e.target.value; } })),
         h('div', { class: 'brick-grid' }, WALL_DATA.materials.map((m) => h('button', { class: `brick ${s.base === m.id ? 'on' : ''}`, style: { '--c': m.color }, title: m.description, onclick: () => { s.base = m.id; s.color = m.color; this.render(); } },
           h('span', { class: 'brick-name' }, m.name), h('span', { class: 'brick-sub' }, `${m.types.join(' / ')} · prédation ${pct(m.predation)} · osmose ${pct(m.osmo)}${m.lytic ? '' : ' · insensible à la lyse'}`))))),
       h('section', { class: 'card' },
-        h('h3', {}, `🧱 Paroi · 2 · Modifications (${s.modifications.length}/3)`),
+        h('h3', {}, `🧱 Paroi · 2 · Modifications (${s.modifications.length}/3) `, help('lysozyme')),
         h('div', { class: 'brick-grid' }, WALL_DATA.modifications.map((m) => h('button', { class: `brick ${s.modifications.includes(m.id) ? 'on' : ''}`, style: { '--c': '#cdb4db' }, title: m.description, onclick: () => {
           s.modifications = s.modifications.includes(m.id) ? s.modifications.filter((x) => x !== m.id) : [...s.modifications, m.id]; this.render();
         } }, h('span', { class: 'brick-name' }, m.name), h('span', { class: 'brick-sub' }, m.description + (m.types ? ` (${m.types.join(', ')})` : '')))))));
@@ -49,7 +50,7 @@ export class EnvelopeWorkshop {
         h('div', { class: 'kv' },
           kv('Cellules compatibles', d.types.join(', ') || 'aucune'),
           kv('Protection contre la prédation', pct(d.predation)),
-          kv('Protection osmotique', pct(d.osmo)),
+          kv(['Protection osmotique ', help('osmose')], pct(d.osmo)),
           kv('Barrière aux toxines', pct(d.toxin)),
           kv('Ralentissement des échanges', `×${d.exchangePenalty} par unité d'épaisseur`),
           kv('Biomasse', `${d.mass} u/µm² par unité d'épaisseur`),
@@ -87,12 +88,12 @@ export class EnvelopeWorkshop {
     const mets = METABOLITES.filter((m) => m.env);
     return h('div', { class: 'ws-left' },
       h('section', { class: 'card' },
-        h('h3', {}, '🔌 Protéine membranaire · 1 · Mécanisme'),
+        h('h3', {}, '🔌 Protéine membranaire · 1 · Mécanisme ', help('transporteurs')),
         h('label', { class: 'row' }, h('span', {}, 'Nom'), h('input', { type: 'text', value: s.name, oninput: (e) => { s.name = e.target.value; s.autoName = false; }, onchange: () => this.render() })),
         h('div', { class: 'brick-grid' }, MPROT_WORKSHOP.mechanisms.map((m) => h('button', { class: `brick ${s.mechanism === m.id ? 'on' : ''}`, style: { '--c': m.kind === 'efflux' ? '#e63946' : '#4cc9f0' }, title: m.description, onclick: () => { s.mechanism = m.id; this.autoNameProt(); this.render(); } },
           h('span', { class: 'brick-name' }, m.name), h('span', { class: 'brick-sub' }, m.description))))),
       h('section', { class: 'card' },
-        h('h3', {}, '🔌 Protéine membranaire · 2 · Molécule transportée'),
+        h('h3', {}, '🔌 Protéine membranaire · 2 · Molécule transportée ', help('diffusion')),
         h('div', { class: 'brick-grid' }, mets.map((m) => h('button', { class: `brick ${s.met === m.id ? 'on' : ''} ${m.transport === 'aucun' ? 'off' : ''}`, style: { '--c': m.color || '#888' }, onclick: () => { s.met = m.id; this.autoNameProt(); this.render(); } },
           h('span', { class: 'brick-name' }, m.name), h('span', { class: 'brick-sub' }, m.transport === 'aucun' ? 'polymère : ne traverse pas' : m.transport === 'actif' ? 'normalement pompé' : 'diffuse librement'))))));
   }

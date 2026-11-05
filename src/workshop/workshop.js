@@ -4,6 +4,7 @@ import { buildEnzyme, emptySpec, describe, specFromEnzyme } from '../simulation/
 import { ELEMENTS } from '../simulation/chem.js';
 import { lineChart } from '../ui/charts.js';
 import { h, clear, fmt, toast } from '../ui/dom.js';
+import { help } from '../ui/help.js';
 
 const CHOICES = METABOLITES.filter((m) => !['biomass', 'phagosome'].includes(m.id));
 const BRICK_COLORS = { hill: '#06d6a0', stable: '#adb5bd', o2tol: '#4895ef', chaperon: '#e9c46a', site: '#e76f51', nad: '#577590', atp: '#f9c74f', antenne: '#52b788', thermo: '#f94144', psychro: '#4cc9f0', acido: '#f3722c', alcali: '#90be6d', disulfure: '#cdb4db', feedback: '#9b5de5', atp_haut: '#ffd166', atp_bas: '#ffb703', signal: '#adb5bd' };
@@ -31,7 +32,7 @@ export class Workshop {
     this.result = res;
     clear(this.left).append(
       h('section', { class: 'card' },
-        h('h3', {}, '1 · Réaction catalysée'),
+        h('h3', {}, '1 · Réaction catalysée ', help('conservation')),
         h('label', { class: 'row' }, h('span', {}, 'Nom'), h('input', { type: 'text', value: s.name, oninput: (e) => { s.name = e.target.value; this.renderRight(); } })),
         h('label', { class: 'row' }, h('span', {}, 'Partir de'), h('select', { onchange: (e) => {
           const list = [...ENZYMES, ...this.ctx.progression.p.customEnzymes.map((x) => x.def)];
@@ -42,18 +43,18 @@ export class Workshop {
         h('div', { class: 'reaction' }, this.sideEditor('substrates', 'Substrats'), h('div', { class: 'arrow' }, '→'), this.sideEditor('products', 'Produits')),
         h('p', { class: 'small muted' }, 'Les éléments (C, N, P, NAD) doivent être conservés et la réaction ne doit pas créer d\'énergie : l\'ATP et le NADH produits doivent être « payés » par la dégradation des substrats.')),
       h('section', { class: 'card' },
-        h('h3', {}, '2 · Site actif'),
+        h('h3', {}, '2 · Site actif ', help('site_actif')),
         h('div', { class: 'brick-grid' }, BRICKS.activeSites.map((b) => brick(b, s.activeSite === b.id, BRICK_COLORS.site, () => { s.activeSite = b.id; this.render(); }, `Km ×${b.kmMul} · kcat ×${b.kcatMul} · coût ×${b.costMul}`)))),
       h('section', { class: 'card' },
-        h('h3', {}, `3 · Domaines (${s.domains.length}/${BRICKS.base.maxDomains})`),
+        h('h3', {}, `3 · Domaines (${s.domains.length}/${BRICKS.base.maxDomains}) `, help('regulation')),
         h('div', { class: 'brick-grid' }, BRICKS.domains.map((b) => brick(b, s.domains.includes(b.id), BRICK_COLORS[b.id] || '#888', () => {
           s.domains = s.domains.includes(b.id) ? s.domains.filter((x) => x !== b.id) : [...s.domains, b.id]; this.render();
         }, domainEffect(b))))),
       h('section', { class: 'card' },
-        h('h3', {}, '4 · Peptide signal (adressage)'),
+        h('h3', {}, '4 · Peptide signal (adressage) ', help('adressage')),
         h('div', { class: 'brick-grid' }, BRICKS.signals.map((b) => brick(b, s.signal === b.id, BRICK_COLORS.signal, () => { s.signal = b.id; this.render(); }, b.location)))),
       h('section', { class: 'card' },
-        h('h3', {}, '5 · Compromis affinité ↔ vitesse'),
+        h('h3', {}, '5 · Compromis affinité ↔ vitesse ', help('michaelis')),
         h('label', { class: 'row slider' }, h('span', {}, 'Vitesse'), h('input', { type: 'range', min: -1, max: 1, step: 0.05, value: s.tradeoff, oninput: (e) => { s.tradeoff = +e.target.value; this.result = buildEnzyme(s, this.editingId); this.renderRight(); } }), h('span', {}, 'Affinité')),
         h('p', { class: 'small muted' }, 'Une enzyme ne peut pas être à la fois très affine (Km bas) et très rapide (kcat élevé) : déplacer le curseur échange l\'un contre l\'autre.')));
     this.renderRight();
@@ -88,21 +89,21 @@ export class Workshop {
           h('thead', {}, h('tr', {}, h('th', {}, 'Bilan'), h('th', {}, 'Δ'), h('th', {}, ''))),
           h('tbody', {},
             ELEMENTS.map((el) => h('tr', {}, h('td', {}, EL_NAMES[el]), h('td', {}, fmt(an.elementDelta?.[el] || 0, 2)), h('td', {}, Math.abs(an.elementDelta?.[el] || 0) < 1e-6 ? '✅' : '⛔'))),
-            h('tr', {}, h('td', {}, 'Énergie libre ΔG'), h('td', {}, `${fmt(an.deltaG, 2)} ATP-éq.`), h('td', {}, an.exergonic ? '✅' : '⛔')))),
+            h('tr', {}, h('td', {}, 'Énergie libre ΔG ', help('energie_libre')), h('td', {}, `${fmt(an.deltaG, 2)} ATP-éq.`), h('td', {}, an.exergonic ? '✅' : '⛔')))),
         res.errors.map((e) => h('div', { class: 'msg error' }, '⛔ ', e)),
         res.warnings.map((e) => h('div', { class: 'msg warn' }, '⚠️ ', e)),
         res.ok ? h('div', { class: 'msg ok' }, '✅ Enzyme réalisable.') : null),
       h('section', { class: 'card' },
-        h('h3', {}, 'Paramètres calculés'),
+        h('h3', {}, 'Paramètres calculés ', help('michaelis')),
         h('div', { class: 'kv' },
           kv('Km', `${fmt(d.km._, 4)} u/µm³${d.location === 'secrete' ? ' (milieu)' : ''}`),
           kv('kcat (Vmax par unité)', `${fmt(d.kcat, 4)} u/s`),
-          kv('T° optimale', `${fmt(d.tOpt, 0)} °C (± ${fmt(d.tWidth, 1)})`),
+          kv(['T° optimale ', help('temperature_ph')], `${fmt(d.tOpt, 0)} °C (± ${fmt(d.tWidth, 1)})`),
           kv('pH optimal', `${fmt(d.pHOpt, 1)} (± ${fmt(d.pHWidth, 1)})`),
           kv('Cofacteurs', d.cofactors.join(', ') || 'aucun'),
           kv('Inhibiteurs', Object.entries(d.inhibitors).map(([m, ki]) => `${MET[m]?.name} (Ki ${ki})`).join(', ') || 'aucun'),
           kv('Régulation', d.regulation === 'atpHigh' ? 'active si ATP abondant' : d.regulation === 'atpLow' ? 'active si ATP bas' : d.feedback ? 'rétro-inhibition' : 'aucune'),
-          kv('Coopérativité', d.hill > 1 ? `Hill ${d.hill} (réponse sigmoïde)` : 'non (Michaelis-Menten)'),
+          kv(['Coopérativité ', help('cooperativite')], d.hill > 1 ? `Hill ${d.hill} (réponse sigmoïde)` : 'non (Michaelis-Menten)'),
           kv('Localisation', d.location),
           kv('Coût de synthèse', `${fmt(d.cost.synth, 3)} u biomasse /conc/µm³`),
           kv('Entretien', `${fmt(d.cost.upkeep * 1000, 2)} mATP/s /conc/µm³`),
