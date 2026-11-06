@@ -235,12 +235,13 @@ export class LocalWorld extends RemoteWorld {
   async call(cmd, args = {}) {
     await this.ready;
     const id = ++this.seq;
-    return new Promise((resolve) => { this.pending.set(id, resolve); this.worker.postMessage({ id, cmd, ...args }); });
+    // « rid » : numéro de requête (distinct d'un éventuel argument « id », par ex. l'identifiant d'une cellule)
+    return new Promise((resolve) => { this.pending.set(id, resolve); this.worker.postMessage({ ...args, rid: id, cmd }); });
   }
 
   onMessage(m) {
     if (m.type === 'ready') { this._workerReady(); return; }
-    if (m.type === 'reply') { const r = this.pending.get(m.id); this.pending.delete(m.id); r?.(m.data); return; }
+    if (m.type === 'reply') { const r = this.pending.get(m.rid); this.pending.delete(m.rid); r?.(m.data); return; }
     const d = m.data;
     switch (m.name) {
       case 'init':

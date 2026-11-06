@@ -34,7 +34,7 @@ export function renderCellSheet(cell, world, actions = {}) {
       kv('Volume / surface', `${fmt(V, 1)} µm³ · S/V ${fmt(ph.sv, 2)} µm⁻¹`),
       kv('Enveloppe', [g.envelope.wall > 0 ? `paroi ${ph.wallName || ''} ${fmt(g.envelope.wall, 2)}` : 'membrane seule', g.envelope.capsule ? 'capsule' : null, ENVELOPE.motility[g.envelope.motility].name + (g.envelope.motilityUnits > 1 ? ` ×${g.envelope.motilityUnits}` : ''), g.envelope.parasite ? 'suçoir' : null, g.envelope.adhesins ? 'adhésines' : null].filter(Boolean).join(', ')),
       kv('Organites', Object.entries(g.organelles).map(([id, n]) => `${ORG[id].name}${n > 1 ? ' ×' + n : ''}`).join(', ')),
-      kv(['Lignée ', help('mutations')], (() => { const st = pop.strains?.find((x) => x.id === cell.strainId); return st ? `souche S${st.id}${st.parent ? ` (issue de S${st.parent})` : ' (fondatrice)'}${st.notes?.length ? ' · ' + st.notes.join(', ') : ''}` : '–'; })()),
+      kv(['Lignée ', help('mutations')], (() => { const st = pop.strains?.find((x) => x.id === cell.strainId); return st ? `souche S${st.id}${st.parent ? ` (issue de S${st.parent})${st.notes?.length ? ' · ' + st.notes.join(', ') : ''}` : ' (fondatrice)'}` : '–'; })()),
       cell.hgt ? kv(['Gènes acquis ', help('transfert_genes')], `${cell.hgt} par transfert horizontal`) : null,
       kv(['Âge · phase ', help('cycle_cellulaire')], `${fmt(cell.age, 0)} s · ${PHASES[cell.phase] || cell.phase}`)),
     h('h4', {}, 'Enzymes (concentration) ', help('enzyme')),

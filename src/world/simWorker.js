@@ -85,11 +85,11 @@ const handlers = {
 };
 
 onmessage = (e) => {
-  const { id, cmd, ...args } = e.data;
+  const { rid, cmd, ...args } = e.data;
   let data;
   try { data = handlers[cmd] ? handlers[cmd](args) : { ok: false, error: `commande inconnue : ${cmd}` }; }
   catch (err) { data = { ok: false, error: err.message }; console.error(err); }
-  if (id !== undefined) postMessage({ type: 'reply', id, data });
+  if (rid !== undefined) postMessage({ type: 'reply', rid, data });
 };
 
 // le module (et ses données JSON) est chargé : le navigateur peut envoyer ses commandes
