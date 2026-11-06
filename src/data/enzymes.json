@@ -1012,6 +1012,95 @@
     "upkeep": 0.0015,
     "volume": 0.015
    }
+  },
+  {
+   "tOpt": 30,
+   "tWidth": 15,
+   "pHOpt": 7.5,
+   "pHWidth": 2.5,
+   "inhibitors": {},
+   "cofactors": [
+    "Ni"
+   ],
+   "id": "urease",
+   "name": "Uréase (sécrétée)",
+   "category": "Azote et pH",
+   "description": "Urée → 2 NH₄⁺ + CO₂, dans le milieu. Fournit de l'azote et libère de l'ammoniac qui rend le milieu basique (pH ↑).",
+   "substrates": {
+    "uree": 1
+   },
+   "products": {
+    "nh4": 2,
+    "co2": 1
+   },
+   "location": "secrete",
+   "km": {
+    "_": 0.002
+   },
+   "kcat": 0.03,
+   "cost": {
+    "synth": 0.025,
+    "upkeep": 0.002,
+    "volume": 0.01
+   }
+  },
+  {
+   "tOpt": 30,
+   "tWidth": 15,
+   "pHOpt": 7.0,
+   "pHWidth": 2.2,
+   "inhibitors": {},
+   "cofactors": [],
+   "id": "synthase_signal",
+   "name": "Synthase d'autoinducteur (LuxI)",
+   "category": "Communication",
+   "description": "Acides aminés + 2 ATP → signal de quorum, qui diffuse dans le milieu. Plus la population est dense, plus le signal est fort.",
+   "substrates": {
+    "aa": 1,
+    "atp": 2
+   },
+   "products": {
+    "signal": 1
+   },
+   "location": "cytosol",
+   "km": {
+    "_": 0.05
+   },
+   "kcat": 0.004,
+   "cost": {
+    "synth": 0.015,
+    "upkeep": 0.001,
+    "volume": 0.005
+   }
+  },
+  {
+   "tOpt": 30,
+   "tWidth": 15,
+   "pHOpt": 7.0,
+   "pHWidth": 2.2,
+   "inhibitors": {},
+   "cofactors": [],
+   "id": "beta_lactamase",
+   "name": "β-lactamase (sécrétée)",
+   "category": "Protection",
+   "description": "Antibiotique β-lactame → pyruvate + NH₄⁺. Détruit l'antibiotique autour de la cellule (et protège aussi les voisines).",
+   "substrates": {
+    "antibiotique": 1
+   },
+   "products": {
+    "pyruvate": 1,
+    "nh4": 1
+   },
+   "location": "secrete",
+   "km": {
+    "_": 0.001
+   },
+   "kcat": 0.04,
+   "cost": {
+    "synth": 0.025,
+    "upkeep": 0.002,
+    "volume": 0.01
+   }
   }
  ]
 }

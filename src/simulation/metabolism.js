@@ -23,11 +23,14 @@ export const CAUSES = {
   predation: 'prédation (phagocytose)',
   age: 'sénescence',
   lysis: 'lyse de la paroi (enzymes lytiques)',
+  antibiotic: 'antibiotique (paroi non reconstruite)',
+  phage: 'lyse virale (bactériophages)',
 };
 const DEAD = METABOLITES.map((m) => (m.dead ? I[m.dead] : -1));
 const HAS_MATTER = METABOLITES.map((m) => Object.keys(m.elements).some((k) => k !== 'Nic'));
 
-export const DMG_KEYS = ['starvation', 'toxin', 'ros', 'ethanol', 'osmo_hypo', 'osmo_hyper', 'heat', 'cold', 'ph', 'lysis'];
+export const DMG_KEYS = ['starvation', 'toxin', 'ros', 'ethanol', 'osmo_hypo', 'osmo_hyper', 'heat', 'cold', 'ph', 'lysis', 'antibiotic'];
+const IP = PARAMS.interactions;
 const D = Object.fromEntries(DMG_KEYS.map((k, i) => [k, i]));
 export function newDamage() { return new Float64Array(DMG_KEYS.length); }
 function addDamage(cell, cause, amount) {
@@ -46,6 +49,7 @@ export function metabolize(cell, env, dt, stats) {
   const gv = env.gridVolume;
   const fields = env.fields;
   const T = env.temperature[g], pH = env.pH[g];
+  const shield = cell.shield || 0; // protection du biofilm (0 à 0,6)
 
   // ---------- 1. Transport membranaire ----------
   const ex = ph.exchange;
@@ -61,7 +65,8 @@ export function metabolize(cell, env, dt, stats) {
       p[I.atp] -= flux * C.activeTransportCost;
     } else {
       let perm = m.perm * ph.permMul[m.i] * ph.passiveMul;
-      if (m.i === I.toxin) perm *= (1 - ph.toxinProtect);
+      if (m.i === I.toxin) perm *= (1 - ph.toxinProtect) * (1 - shield);
+      else if (m.i === I.antibiotique) perm *= (1 - shield);
       // flux passif borné à une demi-équilibration par pas (stabilité numérique)
       const kEq = V * gv / (V + gv);
       flux = (cEnv - cInt) * Math.min(perm * SA * ex * dt, 0.5 * kEq);
@@ -99,6 +104,7 @@ export function metabolize(cell, env, dt, stats) {
     }
     for (let s = 0; s < e.inhib.length; s++) { const inh = e.inhib[s]; v /= 1 + (p[inh.i] / V) / inh.ki; }
     if (e.feedback) v /= 1 + (p[e.feedback.i] / V) / 0.3;
+    if (e.quorum) { const q = fields[I.signal][g] / gv, q3 = q * q * q, k3 = IP.quorumK ** 3; v *= q3 / (k3 + q3); } // quorum sensing
     const atpFrac = p[I.atp] / atpCap;
     if (e.makesAtp) v *= Math.max(0, 1 - atpFrac);
     if (e.regulation === 'atpHigh') v *= Math.max(0, (atpFrac - 0.5) * 2);
@@ -176,7 +182,12 @@ export function metabolize(cell, env, dt, stats) {
   // Enzymes lytiques du voisinage qui ciblent notre paroi
   if (ph.lyticTarget) {
     const a = env.lytic[ph.lyticTarget][g];
-    if (a > 1e-4) addDamage(cell, 'lysis', a * C.lysisDamage / (0.2 + ph.wall) * (cell.genome.envelope.capsule ? 0.7 : 1) * dt);
+    if (a > 1e-4) addDamage(cell, 'lysis', a * C.lysisDamage / (0.2 + ph.wall) * (cell.genome.envelope.capsule ? 0.7 : 1) * (1 - shield) * dt);
+  }
+  // Antibiotique β-lactame : empêche de reconstruire le peptidoglycane, tue surtout les cellules qui grandissent
+  if (ph.wallMaterial === 'peptidoglycane' && ph.wall > 0.02) {
+    const ab = p[I.antibiotique] / V;
+    if (ab > IP.antibioticThreshold) addDamage(cell, 'antibiotic', (ab - IP.antibioticThreshold) * IP.antibioticDamage * 100 * (cell.growth > 0 ? 1 : 0.15) * dt);
   }
   const tox = p[I.toxin] / V;
   if (tox > C.toxinThreshold) addDamage(cell, 'toxin', (tox - C.toxinThreshold) * C.toxinDamage * 100 * dt);

@@ -5,18 +5,21 @@ import { EnzymeRegistry } from './registry.js';
 import { Environment, ENV_METS } from './environment.js';
 import { SpatialHash } from './spatial.js';
 import { normalizeDesign, computePhenotype, mutateDesign } from './genome.js';
+import { compactGenome, strainDistance, describeChanges } from './lineage.js';
 import { metabolize, releaseContents, transferToEater, NMET, MI, CAUSES, newDamage } from './metabolism.js';
 import { Population } from './population.js';
+import { EventScheduler } from './events.js';
 
 const P = PARAMS, Cp = P.cell, IP = P.interactions;
 CAUSES.parasitism = 'parasitisme (ressources détournées)';
 CAUSES.removed = 'retirée par son propriétaire';
+const BF = ENVELOPE.biofilm;
 const EXCHANGED = ['glucose', 'aa', 'nh4', 'o2', 'co2', 'lactate', 'acetate', 'ethanol', 'pyruvate'].map((id) => MI[id]);
 const DRAINED = ['glucose', 'aa', 'pyruvate', 'lactate', 'reserve'].map((id) => MI[id]);
-const SENSE_SCALE = { glucose: 3, lactate: 2, ethanol: 2, acetate: 2, aa: 2, nh4: 2, starch: 4, cellulose: 8, protein: 2, o2: 10, co2: 3, toxin: 1, n2: 10, phosphate: 1.5, pyruvate: 2 };
+const SENSE_SCALE = { uree: 2, glucose: 3, lactate: 2, ethanol: 2, acetate: 2, aa: 2, nh4: 2, starch: 4, cellulose: 8, protein: 2, o2: 10, co2: 3, toxin: 1, n2: 10, phosphate: 1.5, pyruvate: 2 };
 
 export class World {
-  constructor({ seed = 1, env = {}, maxCells = P.world.maxCells } = {}) {
+  constructor({ seed = 1, env = {}, maxCells = P.world.maxCells, events = true } = {}) {
     this.seed = seed;
     this.rng = new RNG(seed);
     this.registry = new EnzymeRegistry();
@@ -38,10 +41,12 @@ export class World {
     this.maxRadius = 1;
     this._scoreTimer = 0;
     this._sampleTimer = 0;
+    // événements du milieu (pas dans les bancs d'essai à milieu uniforme)
+    this.scheduler = events && !env.uniform && env.sources !== false ? new EventScheduler(this) : null;
   }
 
   on(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); }
-  emit(type, ...args) { for (const fn of this.listeners[type]) fn(...args); }
+  emit(type, ...args) { for (const fn of this.listeners[type] || []) fn(...args); }
   log(text, kind = 'info', popId = null) {
     const ev = { t: +this.time.toFixed(1), text, kind, popId };
     this.events.push(ev);
@@ -64,6 +69,7 @@ export class World {
       color: opts.color || d.color || '#4ea8de', design: d, launchedAt: this.time, profile: opts.profile || null,
     });
     this.populations.set(id, pop);
+    const root = pop.addStrain({ parent: null, t: this.time, gen: 0, notes: ['souche fondatrice'], ref: compactGenome(d) });
     const count = opts.count ?? P.game.founders;
     const ph0 = computePhenotype(d, this.registry);
     const spot = (opts.x !== undefined) ? { x: opts.x, y: opts.y } : this.pickSpawnPoint(ph0);
@@ -72,6 +78,7 @@ export class World {
       const x = Math.min(this.width - 1, Math.max(1, spot.x + Math.cos(a) * r));
       const y = Math.min(this.height - 1, Math.max(1, spot.y + Math.sin(a) * r));
       const cell = this.createCell(pop, d, x, y, 0, ph0);
+      cell.strainId = root.id;
       const V = cell.ph.V, p = cell.pools;
       p[MI.biomass] = cell.ph.B0 * this.rng.range(1.0, 1.5);
       p[MI.atp] = Math.min(cell.ph.atpCap, Cp.founderAtpPerVolume * V);
@@ -119,6 +126,7 @@ export class World {
       age: 0, generation, damage: 0, dmg: newDamage(), phase: 'G1', phaseTime: 0, starving: 0, growth: 0,
       lastSense: 0, senseOffset: this.rng.int(0, 29), target: null,
       host: null, hostOffset: null, parasites: 0, partners: [], alive: true, deathCause: null,
+      strainId: 0, shield: 0, bfN: 0, _bf: 0, immune: null, infected: null, hgt: 0,
       sense: this.senseWeights(ph),
     };
     this.cellById.set(cell.id, cell);
@@ -151,6 +159,7 @@ export class World {
   // ------------------------------------------------------------------ pas de temps
   step(dt = P.world.dt) {
     for (const s of this.sources) s.update?.(this, dt);
+    this.scheduler?.update(dt);
     this.env.step(dt, this.tick, this.time);
     const cells = this.cells;
     this.hash.rebuild(cells);
@@ -164,6 +173,11 @@ export class World {
       const pop = this.populations.get(c.popId);
       if (c.host !== null) this.parasiteDrain(c, pop, dt);
       if (metabolize(c, this.env, dt, pop)) { this.kill(c, c.deathCause); continue; }
+      if (!c.ph.euk) {
+        if ((c.infected || this.env.fields[MI.phage][this.env.idx(c.x, c.y)] > 1e-4) && this.phageStep(c, pop, dt)) continue;
+        if (c.infected) continue; // la machinerie de la cellule fabrique des virions : pas de division
+        if (c.ph.competence > 0 && (this.tick + c.id) % 10 === 0) this.transformation(c, pop, dt * 10);
+      }
       // Cycle cellulaire
       const ph = c.ph, p = c.pools;
       const ready = p[MI.biomass] >= 2 * ph.B0 && p[MI.atp] >= Cp.divisionAtpPerVolume * ph.V;
@@ -194,7 +208,12 @@ export class World {
     this._sampleTimer += dt;
     this._scoreTimer += dt;
     const sampling = this._sampleTimer >= 2;
-    if (sampling) this._sampleTimer = 0;
+    if (sampling) {
+      this._sampleTimer = 0;
+      for (const pop of this.populations.values()) for (const st of pop.strains) st.count = 0;
+      for (const c of cells) { const st = this.populations.get(c.popId).strainMap.get(c.strainId); if (st) st.count++; }
+      for (const pop of this.populations.values()) for (const st of pop.strains) if (st.count > st.max) st.max = st.count;
+    }
     const scoring = this._scoreTimer >= P.score.interval;
     for (const pop of this.populations.values()) {
       if (pop.extinct) continue;
@@ -225,6 +244,7 @@ export class World {
     const x2 = Math.min(this.width - 1, Math.max(1, c.x + Math.cos(a) * off));
     const y2 = Math.min(this.height - 1, Math.max(1, c.y + Math.sin(a) * off));
     const d = this.createCell(pop, g2, x2, y2, c.generation + 1);
+    d.strainId = c.strainId; d.immune = c.immune ? [...c.immune] : null; d.hgt = c.hgt;
     const p = c.pools, q = d.pools;
     // cycle d'un parasite : il se détache de son hôte pour se diviser (les filles doivent trouver un nouvel hôte)
     if (c.host !== null) { const hst = this.cellById.get(c.host); if (hst) hst.parasites--; c.host = null; }
@@ -246,7 +266,118 @@ export class World {
     }
     pop.births++;
     if (d.generation > pop.maxGeneration) pop.maxGeneration = d.generation;
+    for (const cell of [c, d]) this.checkStrain(cell, pop);
     return d;
+  }
+
+  // ------------------------------------------------------------------ lignées (arbre des souches)
+  /** Une cellule qui s'est assez éloignée de la référence de sa souche fonde une nouvelle souche. */
+  checkStrain(cell, pop, notes = null) {
+    const st = pop.strainMap.get(cell.strainId);
+    if (!st) return;
+    const cg = compactGenome(cell.genome);
+    if (!notes) {
+      if (strainDistance(st.ref, cg) < P.lineage.threshold) return;
+      notes = describeChanges(st.ref, cg, (id) => (this.registry.get(id)?.name || id).split(' (')[0]);
+    }
+    const ns = pop.addStrain({ parent: st.id, t: this.time, gen: cell.generation, notes, ref: cg });
+    if (ns) { cell.strainId = ns.id; ns.count = 1; ns.max = 1; }
+  }
+
+  // ------------------------------------------------------------------ bactériophages et immunité
+  /** Adsorption, défense (restriction, CRISPR), infection et lyse. Retourne true si la cellule est morte. */
+  phageStep(c, pop, dt) {
+    const env = this.env, g = env.idx(c.x, c.y), F = env.fields[MI.phage];
+    if (c.infected) {
+      c.infected.t -= dt;
+      if (c.infected.t > 0) return false;
+      // lyse : une partie de la biomasse est devenue des virions
+      const amt = c.pools[MI.biomass] * IP.phageBurst;
+      c.pools[MI.biomass] -= amt; F[g] += amt;
+      let strain = c.infected.strain;
+      if (this.rng.chance(IP.phageMutation)) {
+        // mutation : soit la souche échappe aux mémoires CRISPR, soit elle change d'hôte (l'espèce voisine la plus abondante)
+        strain = ++env.phageSeq;
+        let host = c.popId, jumped = false;
+        if (this.rng.chance(0.5)) { const o = this.dominantBacteria(c.x, c.y, 40, c.popId); if (o) { host = o.id; jumped = true; } }
+        env.phageHost.set(strain, host);
+        if (this.time - (this._lastPhageLog || -1e9) > 60) {
+          this._lastPhageLog = this.time;
+          this.log(jumped ? `🦠 Une souche de phage mutante (n° ${strain}) change d'hôte et s'attaque maintenant à « ${this.populations.get(host).name} ».`
+            : `🦠 Une souche de phage mutante (n° ${strain}) apparaît : les mémoires CRISPR existantes ne la reconnaissent pas.`, 'env');
+        }
+      }
+      env.phageStrain[g] = strain;
+      pop.phageDeaths = (pop.phageDeaths || 0) + 1;
+      this.kill(c, 'phage');
+      return true;
+    }
+    const amt = F[g];
+    const strain = env.phageStrain[g] || 1, host = env.phageHost.get(strain);
+    if (host !== undefined && host !== c.popId) return false; // récepteur absent : ce phage ne reconnaît pas cette espèce
+    const rate = IP.phageAdsorb * (amt / env.gridVolume) * c.ph.SA * (c.ph.capsule ? 0.5 : 1) * (1 - c.shield);
+    if (!this.rng.chance(1 - Math.exp(-rate * dt))) return false;
+    const u = Math.min(amt, IP.phageUnit);
+    F[g] -= u; c.pools[MI.biomass] += u; // la matière du virion est absorbée (composition identique)
+    if (c.immune && c.immune.includes(strain)) { pop.phageBlocked = (pop.phageBlocked || 0) + 1; return false; }
+    if (this.rng.chance(c.ph.restriction)) { pop.phageBlocked = (pop.phageBlocked || 0) + 1; return false; }
+    if (c.ph.crispr > 0 && this.rng.chance(c.ph.crispr)) {
+      c.immune = [...(c.immune || []), strain].slice(-4);
+      pop.immunized = (pop.immunized || 0) + 1;
+      if (!pop._crisprLog) { pop._crisprLog = true; this.log(`🛡️ « ${pop.name} » a mémorisé l'ADN d'un phage (CRISPR) : ses descendantes sont immunisées contre cette souche.`, 'info', pop.id); }
+      return false;
+    }
+    c.infected = { t: IP.phageLatency, strain };
+    pop.infections = (pop.infections || 0) + 1;
+    return false;
+  }
+
+  /** Population bactérienne la plus nombreuse dans un rayon (cible privilégiée des phages : « kill the winner »). */
+  dominantBacteria(x, y, r, exclude = null) {
+    const counts = new Map();
+    this.hash.query(x, y, r, (j) => { const o = this.cells[j]; if (o && o.alive && !o.ph.euk && o.popId !== exclude) counts.set(o.popId, (counts.get(o.popId) || 0) + 1); });
+    let best = null, n = 0;
+    for (const [id, k] of counts) if (k > n) { n = k; best = id; }
+    return best ? this.populations.get(best) : null;
+  }
+
+  // ------------------------------------------------------------------ transferts horizontaux de gènes
+  /** Transformation : une cellule compétente intègre un gène de l'ADN libéré par une cellule morte. */
+  transformation(c, pop, dt) {
+    const env = this.env, g = env.idx(c.x, c.y);
+    const src = env.genePool.get(g);
+    if (!src) return;
+    if (this.time - src.t > 300) { env.genePool.delete(g); return; }
+    const adn = env.fields[MI.adn][g];
+    if (adn < 1e-3) return;
+    const conc = adn / env.gridVolume;
+    if (!this.rng.chance(c.ph.competence * (conc / (conc + IP.transformationAdnK)) * dt)) return;
+    const cand = Object.keys(src.genome.enzymes).filter((id) => c.genome.enzymes[id] === undefined);
+    if (!cand.length) return;
+    const taken = Math.min(adn * 0.5, 0.02);
+    env.fields[MI.adn][g] -= taken; c.pools[MI.adn_cell] += taken; // même composition (C5N2P1)
+    this.acquireGene(c, pop, this.rng.pick(cand), src.genome, src.popId, 'transformation');
+  }
+
+  /** Ajoute un gène (enzyme) venu d'un autre génome. */
+  acquireGene(c, pop, id, donor, donorPopId, how) {
+    if (c.hgt >= IP.maxHgtGenes || !this.registry.has(id)) return false;
+    const g = JSON.parse(JSON.stringify(c.genome));
+    g.enzymes[id] = +Math.max(0.1, Math.min(2, (donor.enzymes[id] || 0.5) * 0.5)).toFixed(3);
+    const def = (donor.customEnzymes || []).find((x) => x.id === id);
+    if (def && !(g.customEnzymes || []).some((x) => x.id === id)) g.customEnzymes = [...(g.customEnzymes || []), def];
+    if (donor.quorum?.[id]) g.quorum = { ...(g.quorum || {}), [id]: true };
+    c.genome = normalizeDesign(g);
+    c.ph = computePhenotype(c.genome, this.registry);
+    c.sense = this.senseWeights(c.ph);
+    c.hgt++;
+    pop.hgt = (pop.hgt || 0) + 1;
+    const name = this.registry.get(id)?.name || id;
+    const from = this.populations.get(donorPopId)?.name || 'une autre lignée';
+    this.checkStrain(c, pop, [`+ ${name.split(' (')[0]} (${how}, venu de « ${from} »)`]);
+    pop._hgtSeen = pop._hgtSeen || new Set();
+    if (!pop._hgtSeen.has(id)) { pop._hgtSeen.add(id); this.log(`🧬 « ${pop.name} » a acquis le gène « ${name} » par ${how} (venu de « ${from} »).`, 'info', pop.id); }
+    return true;
   }
 
   kill(c, cause, eater = null) {
@@ -260,7 +391,10 @@ export class World {
       transferToEater(c, eater);
       const ep = this.populations.get(eater.popId);
       ep.prey++; ep.kills++;
-    } else releaseContents(c, this.env);
+    } else {
+      releaseContents(c, this.env);
+      if (!c.ph.euk) this.env.genePool.set(this.env.idx(c.x, c.y), { popId: c.popId, genome: c.genome, t: this.time });
+    }
     for (const pid of c.partners) { const o = this.cellById.get(pid); if (o) o.partners = o.partners.filter((x) => x !== c.id); }
     c.partners = [];
     if (c.host !== null) { const h = this.cellById.get(c.host); if (h) h.parasites--; c.host = null; }
@@ -312,21 +446,22 @@ export class World {
           }
           c.lastSense = a;
         }
-        const sp = ph.speed * (c.pools[MI.atp] > 0 ? 1 : 0.1);
+        const sp = ph.speed * (c.pools[MI.atp] > 0 ? 1 : 0.1) * (ph.biofilm && c.bfN > 0 ? BF.speedFactor : 1);
         c.x += Math.cos(c.heading) * sp * dt;
         c.y += Math.sin(c.heading) * sp * dt;
         c.angle += (((c.heading - c.angle + Math.PI * 3) % (Math.PI * 2)) - Math.PI) * 0.2;
       } else {
         c.angle += rng.gauss() * 0.02;
       }
-      const br = Cp.brownian / Math.sqrt(ph.radius) * Math.sqrt(dt);
+      const br = Cp.brownian / Math.sqrt(ph.radius) * Math.sqrt(dt) * (ph.biofilm && c.bfN > 0 ? BF.speedFactor : 1);
       c.x += rng.gauss() * br; c.y += rng.gauss() * br;
       if (c.x < 1) { c.x = 1; c.heading = Math.PI - c.heading; } else if (c.x > W - 1) { c.x = W - 1; c.heading = Math.PI - c.heading; }
       if (c.y < 1) { c.y = 1; c.heading = -c.heading; } else if (c.y > H - 1) { c.y = H - 1; c.heading = -c.heading; }
     }
 
     // Contacts (grille spatiale)
-    const maxR = this.maxRadius;
+    const maxR = this.maxRadius * 1.35;
+    for (let i = 0; i < cells.length; i++) cells[i]._bf = 0;
     for (let i = 0; i < cells.length; i++) {
       const a = cells[i];
       if (!a.alive || a.host !== null) continue;
@@ -337,7 +472,17 @@ export class World {
         if (!b.alive || b.host !== null || !a.alive) return;
         const dx = b.x - a.x, dy = b.y - a.y, rb = b.ph.radius;
         const d2 = dx * dx + dy * dy, rr = ra + rb;
-        if (d2 >= rr * rr) return;
+        const glued = a.ph.biofilm && b.ph.biofilm && a.popId === b.popId;
+        if (d2 >= rr * rr) {
+          // biofilm : les cellules sœurs proches se collent
+          if (glued && d2 < rr * rr * 1.82) {
+            a._bf++; b._bf++;
+            const d = Math.sqrt(d2), pull = (d - rr) * 0.15, nx = dx / d, ny = dy / d;
+            a.x += nx * pull; a.y += ny * pull; b.x -= nx * pull; b.y -= ny * pull;
+          }
+          return;
+        }
+        if (glued) { a._bf++; b._bf++; }
         const d = Math.sqrt(d2) || 0.001;
         if (a.popId !== b.popId && this.contact(a, b, dt)) return;
         // répulsion
@@ -347,6 +492,12 @@ export class World {
         a.x -= nx * overlap * wa; a.y -= ny * overlap * wa;
         b.x += nx * overlap * wb; b.y += ny * overlap * wb;
       });
+    }
+
+    for (let i = 0; i < cells.length; i++) {
+      const c = cells[i];
+      c.bfN = c._bf;
+      c.shield = c.ph.biofilm ? Math.min(BF.maxShield, BF.shieldPerNeighbor * c.bfN) : 0;
     }
 
     // Symbiose : échanges et liens élastiques
@@ -402,7 +553,7 @@ export class World {
       const px = x.ph, py = y.ph;
       // Phagocytose
       if (px.phagocyte && px.radius >= py.radius * IP.phagoSizeRatio && x.pools[MI.phagosome] < px.B0 * 0.06) {
-        const p = 1 - Math.exp(-IP.phagoBaseProb * 10 * (1 - py.predationProtect) * dt);
+        const p = 1 - Math.exp(-IP.phagoBaseProb * 10 * (1 - py.predationProtect) * (1 - y.shield) * dt);
         if (this.rng.chance(p)) {
           x.pools[MI.atp] = Math.max(0, x.pools[MI.atp] - IP.phagoCost * py.V);
           this.kill(y, 'predation', x);
@@ -411,11 +562,18 @@ export class World {
       }
       // Parasitisme : fixation
       if (px.parasite && x.host === null && py.radius >= px.radius * IP.parasiteSizeRatio && y.parasites < IP.maxParasitesPerHost && y.host === null
-        && this.rng.chance(1 - Math.exp(-2 * (1 - py.predationProtect) * dt))) {
+        && this.rng.chance(1 - Math.exp(-2 * (1 - py.predationProtect) * (1 - y.shield) * dt))) {
         x.host = y.id; y.parasites++;
         const ang = Math.atan2(x.y - y.y, x.x - y.x);
         x.hostOffset = [Math.cos(ang) * (py.radius + px.radius * 0.6), Math.sin(ang) * (py.radius + px.radius * 0.6)];
         return true;
+      }
+    }
+    // Conjugaison : un plasmide passe d'une bactérie à l'autre par contact
+    for (const [x, y] of [[a, b], [b, a]]) {
+      if (x.ph.conjugation > 0 && !y.ph.euk && this.rng.chance(1 - Math.exp(-x.ph.conjugation * dt))) {
+        const cand = Object.keys(x.genome.enzymes).filter((id) => y.genome.enzymes[id] === undefined);
+        if (cand.length) this.acquireGene(y, this.populations.get(y.popId), this.rng.pick(cand), x.genome, x.popId, 'conjugaison');
       }
     }
     // Symbiose : adhésion

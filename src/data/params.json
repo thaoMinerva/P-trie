@@ -45,13 +45,17 @@
   "interactions": {
     "phagoSizeRatio": 1.6, "phagoBaseProb": 0.06, "phagoCost": 0.05,
     "parasiteSizeRatio": 1.3, "maxParasitesPerHost": 1, "crowdLimit": 30,
-    "symbiosisMaxPartners": 2, "bondBreakDistance": 1.6
+    "symbiosisMaxPartners": 2, "bondBreakDistance": 1.6,
+    "phageAdsorb": 5, "phageUnit": 0.01, "phageLatency": 20, "phageBurst": 0.25, "phageMutation": 0.06,
+    "quorumK": 0.00012, "antibioticDamage": 3.0, "antibioticThreshold": 0.0004,
+    "transformationAdnK": 0.001, "maxHgtGenes": 3
   },
   "env": {
     "o2Sat": 0.010, "o2Exchange": 0.02, "co2Atm": 0.003, "co2Exchange": 0.01, "n2Sat": 0.01, "n2Exchange": 0.02,
     "surfaceRows": 3,
     "toxinDecay": 0.01, "proteinDecay": 0.0015, "starchDecay": 0.0003,
     "pHBase": 7.0, "acidRef": 0.004, "acidStrength": 1.2,
+    "signalDecay": 0.02, "phageDecay": 0.012, "antibioticDecay": 0.003,
     "regen": {
       "glucose":   { "patches": 6, "radius": 9,  "cap": 8,   "rate": 0.06, "background": 0.5 },
       "starch":    { "patches": 3, "radius": 10, "cap": 12,  "rate": 0.03, "background": 0.2, "bias": "bottom" },
@@ -59,10 +63,13 @@
       "nh4":       { "patches": 5, "radius": 10, "cap": 6,   "rate": 0.04, "background": 0.8 },
       "phosphate": { "patches": 4, "radius": 12, "cap": 3,   "rate": 0.02, "background": 0.6, "bias": "bottom" },
       "protein":   { "patches": 2, "radius": 8,  "cap": 5,   "rate": 0.01, "background": 0.0 },
+      "uree":      { "patches": 3, "radius": 8,  "cap": 8,   "rate": 0.05, "background": 0.1 },
       "co2":       { "patches": 0, "radius": 0,  "cap": 4,   "rate": 0.004, "background": 1.0 }
     },
-    "initial": { "glucose": 3, "nh4": 2.5, "phosphate": 1.5, "starch": 2, "cellulose": 4, "protein": 0.5, "co2": 3, "o2": 10, "n2": 10 }
+    "initial": { "uree": 0.5, "glucose": 3, "nh4": 2.5, "phosphate": 1.5, "starch": 2, "cellulose": 4, "protein": 0.5, "co2": 3, "o2": 10, "n2": 10 }
   },
+  "events": { "firstDelay": 240, "minGap": 300, "maxGap": 600, "antibioticRate": 0.02, "weights": { "canicule": 2, "froid": 2, "pluie": 2, "apport": 3, "antibiotique": 1, "phages": 1 } },
+  "lineage": { "threshold": 2.5, "maxStrains": 60 },
   "score": {
     "interval": 10, "sizeWeight": 0.08, "diversityWeight": 0.15, "generationBonus": 1.0, "pointsFactor": 1.0
   },

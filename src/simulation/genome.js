@@ -31,7 +31,8 @@ export function normalizeDesign(d) {
   g.shape.size = clamp(+g.shape.size || smin, smin, smax);
   g.shape.aspect = clamp(+g.shape.aspect || 1, 1, 8);
   if (g.shape.kind !== 'libre') g.shape.points = null;
-  const e = (g.envelope = Object.assign({ wall: 0, capsule: false, motility: 'aucune', motilityUnits: 0, parasite: false, adhesins: false }, g.envelope));
+  const e = (g.envelope = Object.assign({ wall: 0, capsule: false, motility: 'aucune', motilityUnits: 0, parasite: false, adhesins: false, biofilm: false }, g.envelope));
+  e.biofilm = !!e.biofilm;
   e.wall = clamp(+e.wall || 0, 0, ENVELOPE.wall.maxThickness);
   for (const cw of g.customWalls || []) registerWall(cw);
   if (!WALLS[e.wallType] || !WALLS[e.wallType].types.includes(g.type)) e.wallType = defaultWallType(g.type);
@@ -60,6 +61,10 @@ export function normalizeDesign(d) {
   g.enzymes = enz;
   g.customEnzymes = (g.customEnzymes || []).filter((ce) => enz[ce.id] !== undefined);
   g.customOrganelles = (g.customOrganelles || []).filter((co) => orgs[co.id] !== undefined);
+  // enzymes placées sous contrôle du quorum (actives seulement quand le signal est fort)
+  const q = {};
+  for (const id of Object.keys(g.quorum || {})) if (enz[id] !== undefined && g.quorum[id]) q[id] = true;
+  g.quorum = q;
   g.hue = g.hue || 0;
   return g;
 }
@@ -77,7 +82,7 @@ export function computePhenotype(design, registry) {
   const orgCount = (id) => g.organelles[id] || 0;
 
   let volUsed = 0, massPerV = 0, upkeepPerV = 0;
-  const fx = { storage: 0, proteinSynthesis: 0, secretion: 0, digestion: 0, osmoregulation: 0, rosDetox: 0, hyperProtect: 0, cheapVolume: 0, membraneBoost: 0, ribosomes: 0 };
+  const fx = { storage: 0, proteinSynthesis: 0, secretion: 0, digestion: 0, osmoregulation: 0, rosDetox: 0, hyperProtect: 0, cheapVolume: 0, membraneBoost: 0, ribosomes: 0, crispr: 0, restriction: 0, competence: 0, conjugation: 0 };
   let phagocytosis = false, autophagy = false;
   const capacities = { mitochondrie: 0, chloroplaste: 0 };
   for (const co of g.customOrganelles || []) registerOrganelle(co);
@@ -128,7 +133,7 @@ export function computePhenotype(design, registry) {
       id, def, conc, cap, loc, subs, prods, inhib, vmax: conc * def.kcat * cap * V,
       kcat: def.kcat, tOpt: def.tOpt, tWidth: def.tWidth, pHOpt: def.pHOpt, pHWidth: def.pHWidth,
       makesAtp: (def.products.atp || 0) > 0, regulation: def.regulation || null,
-      feedback: def.feedback ? mainProduct : null, lytic: def.lytic && def.location === 'secrete' ? def.lytic : null,
+      quorum: !!g.quorum?.[id], feedback: def.feedback ? mainProduct : null, lytic: def.lytic && def.location === 'secrete' ? def.lytic : null,
     });
     tSum += def.tOpt * conc; pHSum += def.pHOpt * conc; wSum += conc;
   }
@@ -140,7 +145,7 @@ export function computePhenotype(design, registry) {
   const wall = env.wall;
   const exchange = 1 / (1 + wall * M.exchangePenalty) / (env.capsule ? 1 + CAP.exchangePenalty : 1);
   const wallMass = wall * M.mass * SA;
-  const capsuleMass = env.capsule ? CAP.mass * SA : 0;
+  const capsuleMass = (env.capsule ? CAP.mass * SA : 0) + (env.biofilm ? ENVELOPE.biofilm.mass * SA : 0);
   const predationProtect = 1 - (1 - Math.min(1, wall / W.maxThickness) * M.predation) * (1 - (env.capsule ? CAP.predationProtect : 0));
   const toxinProtect = 1 - (1 - Math.min(1, wall) * M.toxin) * (1 - (env.capsule ? CAP.toxinProtect : 0));
   const osmoProtect = Math.min(1, wall / 0.15) * M.osmo;
@@ -183,12 +188,13 @@ export function computePhenotype(design, registry) {
     ribosomes: fx.ribosomes, proteinBoost: 1 + fx.proteinSynthesis,
     digestion: fx.digestion, osmoregulation: fx.osmoregulation, rosDetox: fx.rosDetox, hyperProtect: fx.hyperProtect,
     exchange, activeUptake: env.parasite ? 0.03 : 1, predationProtect, toxinProtect, osmoProtect, wall,
-    wallType: M.id, wallName: M.name, lyticTarget: wall > 0.02 ? M.lytic : null, rosProtect: wall > 0.02 ? (M.rosProtect || 0) : 0,
+    wallType: M.id, wallMaterial: M.bricks?.base || M.id, wallName: M.name, lyticTarget: wall > 0.02 ? M.lytic : null, rosProtect: wall > 0.02 ? (M.rosProtect || 0) : 0,
     permMul, passiveMul, effluxes, membraneUsed,
     speed, motilityCost, motile: speed > 0,
     phagocyte: euk && phagocytosis && wall < W.phagocytosisBlock,
     autophagy: autophagy ? 2 : 1,
-    parasite: !!env.parasite, adhesins: !!env.adhesins,
+    parasite: !!env.parasite, adhesins: !!env.adhesins, biofilm: !!env.biofilm, capsule: !!env.capsule,
+    crispr: Math.min(0.9, fx.crispr), restriction: Math.min(0.8, fx.restriction), competence: fx.competence, conjugation: fx.conjugation,
     tOpt: wSum ? tSum / wSum : 30, pHOpt: wSum ? pHSum / wSum : 7,
     membraneFactor, mitoFactor, chloroFactor,
   };

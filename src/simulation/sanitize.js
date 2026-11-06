@@ -19,6 +19,7 @@ export function sanitizeDesign(raw, playerId) {
     const r = buildEnzyme({ name: e.name, substrates: e.substrates, products: e.products, activeSite: b.activeSite, domains: b.domains, signal: b.signal, tradeoff: b.tradeoff }, pre(e.id));
     if (!r.ok) fail(`Enzyme « ${e.name} »`, r.errors);
     renameKey(d.enzymes, e.id, r.def.id);
+    renameKey(d.quorum, e.id, r.def.id);
     return r.def;
   });
   d.customOrganelles = (d.customOrganelles || []).map((o) => {

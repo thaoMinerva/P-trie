@@ -36,6 +36,18 @@
       "effects": { "osmoregulation": 0.6 }, "color": "#48cae4" },
     { "id": "peroxysome", "name": "Peroxysomes", "types": ["eucaryote"], "max": 4, "volume": 0.01, "mass": 0.005, "upkeep": 0.0003, "radius": 0.06,
       "description": "Contiennent de la catalase : détruisent les espèces réactives de l'oxygène.",
-      "effects": { "rosDetox": 0.15 }, "color": "#ffd166" }
+      "effects": { "rosDetox": 0.15 }, "color": "#ffd166" },
+    { "id": "crispr", "name": "Système CRISPR-Cas", "types": ["procaryote"], "max": 2, "volume": 0.01, "mass": 0.006, "upkeep": 0.0003, "radius": 0.0,
+      "description": "Immunité adaptative contre les phages : la cellule garde un fragment d'ADN viral en mémoire et détruit ensuite ce virus. Mémoire transmise aux descendantes.",
+      "effects": { "crispr": 0.3 }, "color": "#ff70a6" },
+    { "id": "restriction", "name": "Enzymes de restriction", "types": ["procaryote"], "max": 2, "volume": 0.006, "mass": 0.004, "upkeep": 0.0002, "radius": 0.0,
+      "description": "Immunité innée : découpe l'ADN étranger qui entre (phages), quelle que soit la souche. Moins efficace que CRISPR mais immédiate.",
+      "effects": { "restriction": 0.3 }, "color": "#ff9770" },
+    { "id": "competence", "name": "Machinerie de compétence", "types": ["procaryote"], "max": 2, "volume": 0.006, "mass": 0.004, "upkeep": 0.0002, "radius": 0.0,
+      "description": "Pili et protéines qui capturent l'ADN libéré par les cellules mortes : la cellule peut intégrer un gène d'une autre espèce (transformation).",
+      "effects": { "competence": 0.04 }, "color": "#70d6ff" },
+    { "id": "plasmide", "name": "Plasmide conjugatif", "types": ["procaryote"], "max": 1, "volume": 0.01, "mass": 0.006, "upkeep": 0.0004, "radius": 0.06,
+      "description": "Petit ADN circulaire qui se copie vers les bactéries touchées par un pilus sexuel (conjugaison) en emportant un des gènes de la cellule.",
+      "effects": { "conjugation": 0.05 }, "color": "#e9ff70" }
   ]
 }

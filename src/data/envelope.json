@@ -14,5 +14,7 @@
   "parasite": { "name": "Suçoir (parasitisme)", "mass": 0.04, "drainRate": 0.0008,
     "description": "Permet de se fixer à un hôte plus grand d'une autre espèce et d'y prélever sucres, acides aminés et pyruvate." },
   "adhesins": { "name": "Adhésines symbiotiques", "mass": 0.02, "exchangeRate": 0.003,
-    "description": "Collent la cellule à un partenaire d'une autre espèce qui en possède aussi : les deux échangent leurs métabolites (glucose, NH₄⁺, O₂, CO₂, acides aminés, déchets)." }
+    "description": "Collent la cellule à un partenaire d'une autre espèce qui en possède aussi : les deux échangent leurs métabolites (glucose, NH₄⁺, O₂, CO₂, acides aminés, déchets)." },
+  "biofilm": { "name": "Matrice de biofilm", "mass": 0.05, "speedFactor": 0.15, "shieldPerNeighbor": 0.12, "maxShield": 0.6,
+    "description": "La cellule sécrète une matrice gluante (polysaccharides, ADN) qui la colle à ses sœurs : plus elles sont nombreuses à se toucher, mieux elles résistent aux prédateurs, toxines, antibiotiques et phages. Mais le biofilm bouge à peine." }
 }

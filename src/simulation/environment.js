@@ -26,6 +26,10 @@ export class Environment {
     this.patchTargets = {};
     this.lightLevel = 1;
     this.scratch = new Float64Array(this.n);
+    this.phageStrain = new Int32Array(this.n); // souche de phage dominante par case (0 = aucune)
+    this.phageSeq = 1;
+    this.phageHost = new Map(); // souche de phage → population hôte (les phages sont spécifiques d'une espèce)
+    this.genePool = new Map(); // case → dernier génome bactérien libéré (ADN pour la transformation)
     if (options.uniform) this.setupUniform(options.uniform);
     else this.setupTerrain(rng);
   }
@@ -91,12 +95,15 @@ export class Environment {
   lightAt(i) { return this.lightDepth[Math.floor(i / this.gw)] * this.lightLevel; }
 
   updatePH() {
-    const acids = METABOLITES.map((m, i) => ({ ...m, index: i })).filter((m) => m.acid);
+    if (!this._acidBase) this._acidBase = METABOLITES.map((m, i) => ({ i, w: (m.acid || 0) - (m.base || 0) })).filter((m) => m.w !== 0);
+    const ab = this._acidBase;
     for (let i = 0; i < this.n; i++) {
+      // acides (lactate, acétate, CO₂) − bases (ammoniac) : le pH baisse ou monte autour de sa valeur de base
       let a = 0;
-      for (const m of acids) a += m.acid * this.fields[m.index][i];
+      for (let k = 0; k < ab.length; k++) a += ab[k].w * this.fields[ab[k].i][i];
       a /= this.gridVolume;
-      this.pH[i] = this.pHBase[i] - E.acidStrength * Math.log10(1 + a / E.acidRef);
+      const d = E.acidStrength * Math.log10(1 + Math.abs(a) / E.acidRef);
+      this.pH[i] = Math.max(2, Math.min(11, this.pHBase[i] + (a > 0 ? -d : d)));
     }
   }
 
@@ -151,10 +158,17 @@ export class Environment {
     }
     // Dégradations spontanées (conservent la matière)
     const tox = this.field('toxin'), co2 = this.field('co2'), prot = this.field('protein'), aa = this.field('aa'), st = this.field('starch'), glc = this.field('glucose');
+    const sig = this.field('signal'), phg = this.field('phage'), abx = this.field('antibiotique'), pho = this.field('phosphate'), pyr = this.field('pyruvate'), nh4 = this.field('nh4');
     for (let i = 0; i < n; i++) {
       const dT = tox[i] * E.toxinDecay * dt; tox[i] -= dT; co2[i] += 3 * dT;
       const dP = prot[i] * E.proteinDecay * dt; prot[i] -= dP; aa[i] += dP;
       const dS = st[i] * E.starchDecay * dt; st[i] -= dS; glc[i] += dS;
+      // signal de quorum instable (lactonase spontanée) → acides aminés
+      if (sig[i] > 0) { const d = sig[i] * E.signalDecay * dt; sig[i] -= d; aa[i] += d; }
+      // virions inactivés → protéines + phosphate (C3N1P0,1 = protéine C3N1 + 0,1 phosphate)
+      if (phg[i] > 0) { const d = phg[i] * E.phageDecay * dt; phg[i] -= d; prot[i] += d; pho[i] += 0.1 * d; }
+      // hydrolyse spontanée de l'antibiotique → pyruvate + NH₄⁺
+      if (abx[i] > 0) { const d = abx[i] * E.antibioticDecay * dt; abx[i] -= d; pyr[i] += d; nh4[i] += d; }
     }
     const sec = this.secreted;
     for (let i = 0; i < n; i++) sec[i] *= 0.97;
@@ -165,7 +179,22 @@ export class Environment {
         if (D > 0) this.diffuse(this.field(id), Math.min(0.9, D));
       }
     }
-    if (tick % 10 === 0) this.updatePH();
+    if (tick % 10 === 0) { this.updatePH(); this.spreadPhageStrains(); }
+  }
+
+  /** Les virions qui diffusent emportent leur souche : une case adopte la souche d'une voisine bien plus chargée. */
+  spreadPhageStrains() {
+    const F = this.fields[MET.phage.index], S = this.phageStrain, { gw, gh } = this;
+    for (let i = 0; i < this.n; i++) {
+      if (F[i] < 1e-6) { S[i] = 0; continue; }
+      const x = i % gw, y = (i / gw) | 0;
+      let best = S[i] ? F[i] * 2 : 0, bs = S[i];
+      if (x > 0 && S[i - 1] && F[i - 1] > best) { best = F[i - 1]; bs = S[i - 1]; }
+      if (x < gw - 1 && S[i + 1] && F[i + 1] > best) { best = F[i + 1]; bs = S[i + 1]; }
+      if (y > 0 && S[i - gw] && F[i - gw] > best) { best = F[i - gw]; bs = S[i - gw]; }
+      if (y < gh - 1 && S[i + gw] && F[i + gw] > best) { best = F[i + gw]; bs = S[i + gw]; }
+      S[i] = bs || 1;
+    }
   }
 
   totals() {

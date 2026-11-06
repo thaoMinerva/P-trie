@@ -28,6 +28,30 @@ export class Population {
     this.kills = 0;
     this.resourcesUsed = [];
     this._lastGenBonus = 0;
+    // lignées (souches) : arbre des variants apparus par mutation ou transfert de gènes
+    this.strains = [];
+    this.strainMap = new Map();
+    this.nextStrain = 0;
+    this.hgt = 0; this.immunized = 0; this.infections = 0; this.phageDeaths = 0; this.phageBlocked = 0;
+  }
+
+  /** Ajoute une souche ; élague les branches éteintes et mineures au-delà de la limite. */
+  addStrain({ parent, t, gen, notes, ref }) {
+    const MAX = PARAMS.lineage.maxStrains;
+    if (this.strains.length >= MAX) {
+      const hasChild = new Set(this.strains.map((s) => s.parent));
+      const victims = this.strains.filter((s) => s.parent !== null && s.count === 0 && !hasChild.has(s.id)).sort((a, b) => a.max - b.max);
+      if (!victims.length) return null;
+      const v = victims[0];
+      this.strains = this.strains.filter((s) => s !== v); this.strainMap.delete(v.id);
+    }
+    const s = { id: ++this.nextStrain, parent, t: +t.toFixed(1), gen, notes, ref, count: 0, max: 0 };
+    this.strains.push(s); this.strainMap.set(s.id, s);
+    return s;
+  }
+  setStrains(list, next) {
+    this.strains = list || []; this.strainMap = new Map(this.strains.map((s) => [s.id, s]));
+    this.nextStrain = next || this.strains.reduce((m, s) => Math.max(m, s.id), 0);
   }
 
   recordDeath(cause) {
@@ -85,7 +109,9 @@ export class Population {
         ros: ' Ajoutez de la catalase pour une vie aérobie ou photosynthétique.',
         heat: ' Les enzymes étaient inadaptées à la température locale.',
         cold: ' Les enzymes étaient inadaptées à la température locale.',
-        ph: " Le milieu s'est trop acidifié (fermentations voisines ?).",
+        ph: " Le pH du milieu est sorti de la zone tolérée (fermentations acides ou ammoniac voisins ?).",
+        phage: ' Des bactériophages ont décimé la population : un système CRISPR, des enzymes de restriction, une capsule ou un biofilm protègent.',
+        antibiotic: ' Un antibiotique β-lactame bloquait la construction de la paroi : une β-lactamase, une pompe d\'efflux ou un biofilm protègent.',
       };
       summary += hints[main] || '';
     }
@@ -99,6 +125,8 @@ export class Population {
       maxGeneration: this.maxGeneration, deathCauses: this.deathCauses, score: +this.score.toFixed(2), pointsEarned: +this.pointsEarned.toFixed(2),
       kills: this.kills, resourcesUsed: this.resourcesUsed, extinctionSummary: this.extinctionSummary,
       history: this.history, design: this.design,
+      hgt: this.hgt, immunized: this.immunized, infections: this.infections, phageDeaths: this.phageDeaths,
+      strains: this.strains.map(({ ref, ...st }) => st),
     };
   }
 }
