@@ -37,6 +37,9 @@ const KITS = [
   { name: 'Recycleur d\'ADN/ARN', desc: 'Digère les acides nucléiques des cadavres : phosphore, azote et carbone.', enzymes: { adnase: 1, arnase: 1, nucleotidase: 1.2 } },
   { name: 'Croissance boostée (ARN)', desc: 'ARN polymérase + synthèse de nucléotides : ribosomes jusqu\'à +60 %.', enzymes: { arn_polymerase: 1, synthese_nucleotides: 0.8 } },
   { name: 'Réparation de l\'ADN', desc: 'ADN polymérase : répare les dommages jusqu\'à 3× plus vite.', enzymes: { adn_polymerase: 0.8, synthese_nucleotides: 0.6 } },
+  { name: 'Uréolytique (pH ↑)', desc: 'Uréase sécrétée : urée → ammonium. Source d\'azote, rend le milieu basique.', enzymes: { urease: 2 } },
+  { name: 'Communication (quorum)', desc: 'Fabrique un signal : cochez ensuite « quorum » sur les enzymes à n\'activer qu\'en groupe.', enzymes: { synthase_signal: 1.5 } },
+  { name: 'Résistance aux antibiotiques', desc: 'β-lactamase sécrétée : détruit les β-lactames autour de la cellule.', enzymes: { beta_lactamase: 1 } },
   { name: 'Lyse des bactéries', desc: 'Lysozyme sécrété : fait éclater les parois de peptidoglycane voisines.', enzymes: { lysozyme: 1 } },
 ];
 
@@ -183,7 +186,9 @@ export class Editor {
         h('div', { class: 'choice-grid' },
           toggleCard(d.envelope.capsule, 'Capsule', ENVELOPE.capsule.description, (v) => { d.envelope.capsule = v; this.change(true); }),
           toggleCard(d.envelope.parasite, 'Suçoir (parasitisme)', ENVELOPE.parasite.description, (v) => { d.envelope.parasite = v; this.change(true); }),
-          toggleCard(d.envelope.adhesins, 'Adhésines symbiotiques', ENVELOPE.adhesins.description, (v) => { d.envelope.adhesins = v; this.change(true); }))),
+          toggleCard(d.envelope.adhesins, 'Adhésines symbiotiques', ENVELOPE.adhesins.description, (v) => { d.envelope.adhesins = v; this.change(true); }),
+          toggleCard(d.envelope.biofilm, 'Matrice de biofilm', ENVELOPE.biofilm.description, (v) => { d.envelope.biofilm = v; this.change(true); })),
+        h('div', { class: 'small muted' }, 'En savoir plus : capsule ', help('capsule'), ' · biofilm ', help('biofilm'), ' · symbiose ', help('interactions'))),
       card(['Protéines membranaires ', help('transporteurs')],
         intro('Transporteurs (capturent mieux un nutriment), pompes d\'efflux (expulsent toxines ou déchets contre de l\'ATP), porines (accélèrent les échanges passifs). Elles occupent la surface de la membrane.'),
         h('div', { class: 'bar' }, h('span', { class: 'bar-label' }, 'Membrane'), h('span', { class: 'bar-track' }, h('span', { class: 'bar-fill', style: { width: `${Math.min(1, memFrac) * 100}%`, background: memFrac > 1 ? '#e63946' : memFrac > 0.8 ? '#f8961e' : '#43aa8b' } })), h('span', { class: 'bar-val' }, `${Math.round(memFrac * 100)} / 100 %`)),
@@ -284,6 +289,9 @@ export class Editor {
     if (on) {
       const val = h('span', { class: 'val' }, fmt(d.enzymes[e.id], 2));
       r.append(h('div', { class: 'enz-slider' }, h('span', { class: 'small muted' }, 'concentration'), h('input', { type: 'range', min: 0.1, max: 5, step: 0.05, value: d.enzymes[e.id], oninput: (ev) => { d.enzymes[e.id] = +ev.target.value; val.textContent = fmt(+ev.target.value, 2); this.change(); } }), val));
+      if (e.id !== 'synthase_signal') r.append(h('label', { class: 'small quorum-opt', title: 'L\'enzyme ne fonctionne que si le signal de quorum est fort autour de la cellule (population dense).' },
+        h('input', { type: 'checkbox', checked: !!d.quorum?.[e.id], onchange: (ev) => { d.quorum = { ...(d.quorum || {}) }; if (ev.target.checked) d.quorum[e.id] = true; else delete d.quorum[e.id]; this.change(); } }),
+        ' 🗣️ seulement en groupe (quorum sensing) ', help('quorum')));
     }
     return r;
   }

@@ -17,6 +17,7 @@ import { sanitizeDesign } from '../src/simulation/sanitize.js';
 import { analyzeDesign } from '../src/simulation/analysis.js';
 import { launchCost } from '../src/game/progression.js';
 import { MI, DMG_KEYS } from '../src/simulation/metabolism.js';
+import { challengeStatus } from '../src/game/challenges.js';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const port = Number(process.argv[2] || process.env.PORT || 5173);
@@ -105,6 +106,7 @@ function popPayload(p, withHistory) {
     deathCauses: p.deathCauses, score: p.score, pointsEarned: p.pointsEarned, kills: p.kills, symbiosis: p.symbiosis, parasitism: p.parasitism,
     resourcesUsed: p.resourcesUsed, extinct: p.extinct, extinctAt: p.extinctAt, extinctionSummary: p.extinctionSummary,
     history: withHistory ? p.history : undefined,
+    hgt: p.hgt, immunized: p.immunized, infections: p.infections, phageDeaths: p.phageDeaths, strains: p.strains.map(({ ref, ...st }) => st),
   };
 }
 
@@ -119,9 +121,9 @@ function statePayload() {
     cells[k++] = Math.round(c.x * 10) / 10; cells[k++] = Math.round(c.y * 10) / 10;
     cells[k++] = Math.round(c.angle * 100) / 100; cells[k++] = Math.round(c.ph.radius * 100) / 100;
     cells[k++] = Math.round((c.pools[MI.biomass] / c.ph.B0) * 100) / 100; cells[k++] = Math.round(c.genome.hue || 0);
-    cells[k++] = c.phase === 'G1' ? 0 : 1; cells[k++] = c.host || 0; cells[k++] = c.partners[0] || 0;
+    cells[k++] = (c.phase === 'G1' ? 0 : 1) | (c.bfN > 0 ? 2 : 0) | (c.infected ? 4 : 0); cells[k++] = c.host || 0; cells[k++] = c.partners[0] || 0;
   }
-  return { t: world.time, light: world.env.lightLevel, pops, cells };
+  return { t: world.time, light: world.env.lightLevel, pops, cells, evs: world.scheduler?.summary() || [] };
 }
 
 function usersPayload() {
@@ -135,6 +137,24 @@ setInterval(() => {
   broadcast('pops', { pops: [...world.populations.values()].filter((p) => !p.extinct || world.time - p.extinctAt < 600).map((p) => popPayload(p, true)), users: usersPayload() });
 }, 2000);
 setInterval(() => { for (const c of clients) c.res.write(': ping\n\n'); }, 15000);
+
+// Défis guidés : évalués ici (le serveur a l'état complet du monde) pour chaque joueur connecté.
+setInterval(() => {
+  for (const pl of players.values()) {
+    if (!clientsOf(pl.id).length) continue;
+    pl.challenges = pl.challenges || {};
+    const list = challengeStatus(world, pl.id, pl.challenges);
+    for (const c of list) {
+      if (c.done || !c.progress || c.progress[0] < c.progress[1]) continue;
+      pl.challenges[c.id] = Math.round(world.time); c.done = true;
+      pl.points += c.reward; pl.totalEarned += c.reward;
+      sendTo(pl.id, 'challengeDone', { id: c.id, title: c.title, reward: c.reward });
+      sendTo(pl.id, 'points', { points: pl.points, totalEarned: pl.totalEarned, gain: c.reward });
+      world.log(`🎯 ${pl.name} réussit le défi « ${c.title} ».`, 'ghost');
+    }
+    sendTo(pl.id, 'challenges', list.map(({ id, icon, title, goal, hint, help, reward, done, progress }) => ({ id, icon, title, goal, hint, help, reward, done, progress })));
+  }
+}, 5000);
 
 // ------------------------------------------------------------------ API
 async function body(req) {
@@ -233,6 +253,7 @@ const api = {
       ok: true, id: c.id, popId: c.popId, genome: c.genome, pools: Array.from(c.pools), dmg: Array.from(c.dmg), dmgKeys: DMG_KEYS,
       damage: c.damage, age: c.age, generation: c.generation, phase: c.phase, x: c.x, y: c.y, angle: c.angle,
       host: c.host, parasites: c.parasites, partners: c.partners,
+      strainId: c.strainId, shield: c.shield, bfN: c.bfN, infected: c.infected, immune: c.immune, hgt: c.hgt,
       local: { T: env.temperature[g], pH: env.pH[g], light: env.lightAt(g), salinity: env.salinity[g],
         o2: env.fields[MET.o2.index][g], glucose: env.fields[MET.glucose.index][g], nh4: env.fields[MET.nh4.index][g], protein: env.fields[MET.protein.index][g] },
     });

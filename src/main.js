@@ -18,10 +18,14 @@ import { EnvelopeWorkshop } from './workshop/envelopeWorkshop.js';
 import { h, $, $$, fmt, fmtTime, toast } from './ui/dom.js';
 import { help, setLivretOpener } from './ui/help.js';
 import { Livret } from './ui/livret.js';
+import { EVENT_TYPES } from './simulation/events.js';
 import { ChatPanel } from './ui/chat.js';
+import { renderChallenges } from './ui/challengesView.js';
+import { challengeStatus, newlyCompleted } from './game/challenges.js';
 
 const W = PARAMS.world;
 const app = { world: null, ghosts: null, speed: 1, tab: 'monde' };
+window.petri = app; // accès console (curieux, tests)
 
 // ------------------------------------------------------------------ progression
 const progression = new Progression(loadProfile() || newProfile());
@@ -35,6 +39,11 @@ function wireWorld(world) {
     if (isMine(pop)) { progression.archive(pop.summary()); toast(`☠️ Votre population « ${pop.name} » s'est éteinte. Voir les archives.`, 'warn'); }
   });
   world.on('event', () => { journalDirty = true; });
+  if (world.remote) {
+    world.on('challenges', (list) => { app.challenges = list; if (app.tab === 'defis') renderChallenges($('#defis-root'), list); });
+    world.on('challengeDone', (c) => toast(`🎯 Défi réussi : « ${c.title} » (+${c.reward} points) !`, 'ok'));
+  }
+  world.on('envEvent', (e) => { const T = EVENT_TYPES[e.type]; if (T) toast(`${T.icon} ${T.name} ! Voir le journal.`, 'warn'); });
 }
 
 function newWorld(seed = (Date.now() % 1e9) | 0) {
@@ -105,7 +114,7 @@ let view, editor, workshop, orgWorkshop, envWorkshop, livret, journalDirty = tru
 
 // Calque affiché → section du livret qui l'explique
 const LAYER_HELP = { glucose: 'glycolyse', o2: 'respiration', co2: 'photosynthese', nh4: 'azote', light: 'lumiere', temperature: 'temperature_ph', ph: 'ph', salinity: 'osmose',
-  phosphate: 'adn_arn', protein: 'decomposeurs', aa: 'azote', starch: 'reserves', cellulose: 'decomposeurs', lactate: 'fermentation', ethanol: 'fermentation', acetate: 'fermentation', toxin: 'toxines', secreted: 'enzymes_secretees' };
+  phosphate: 'adn_arn', protein: 'decomposeurs', aa: 'azote', starch: 'reserves', cellulose: 'decomposeurs', lactate: 'fermentation', ethanol: 'fermentation', acetate: 'fermentation', toxin: 'toxines', secreted: 'enzymes_secretees', uree: 'ph', signal: 'quorum', phage: 'phages', antibiotique: 'antibiotiques' };
 
 function setup() {
   const canvas = $('#world-canvas');
@@ -173,6 +182,22 @@ function showTab(tab) {
   if (tab === 'atelier') workshop.renderRight();
   if (tab === 'organites') orgWorkshop.renderRight();
   if (tab === 'enveloppe') envWorkshop.render();
+  if (tab === 'defis') renderChallenges($('#defis-root'), currentChallenges());
+}
+
+// Défis : évalués localement en solo, par le serveur en multijoueur.
+function currentChallenges() {
+  if (app.world.remote) return app.challenges || challengeStatus(app.world, '__aucun__', {});
+  return challengeStatus(app.world, identity.id, progression.p.challenges || {});
+}
+function checkChallenges() {
+  if (app.world.remote) return;
+  progression.p.challenges = progression.p.challenges || {};
+  for (const c of newlyCompleted(app.world, identity.id, progression.p.challenges)) {
+    progression.p.challenges[c.id] = Math.round(app.world.time);
+    progression.earn(c.reward);
+    toast(`🎯 Défi réussi : « ${c.title} » (+${c.reward} points) !`, 'ok');
+  }
 }
 
 function setSpeed(s) { app.speed = s; $$('.speed').forEach((b) => b.classList.toggle('on', +b.dataset.speed === s)); }
@@ -318,6 +343,8 @@ function loop(now) {
   if (chartTimer > 2 && app.tab === 'monde') refreshRemoteLayer();
   if (chartTimer > 2) {
     chartTimer = 0;
+    checkChallenges();
+    if (app.tab === 'defis') renderChallenges($('#defis-root'), currentChallenges());
     if (app.tab === 'monde') lineChart($('#world-chart'), popSeries(app.world, (p) => !p.extinct || app.world.time - p.extinctAt < 120), { log: true, xFmt: (v) => `${Math.round(v)} s` });
     if (app.tab === 'populations') renderPopulations($('#populations-root'), app.world, progression, app.ghosts, popActions);
   }

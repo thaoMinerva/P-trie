@@ -23,6 +23,15 @@ export function analyzeDesign(design, registry) {
   for (const e of enz) if (e.lytic && e.lytic === ph.lyticTarget) warnings.push(`${e.def.name} attaque votre propre paroi (${ph.wallName}) : changez de matériau ou ajoutez l'O-acétylation.`);
   if (enz.some((e) => e.id === 'arn_polymerase' || e.id === 'adn_polymerase') && !consumes('adn') && !consumes('arn') && !produces('nucleotide') && !(d.membraneProteins?.t_nucleotide)) info.push('Les polymérases utilisent les nucléotides du milieu (issus de l\'ADN/ARN des cadavres) : une ADNase/ARNase ou la synthèse de nucléotides les rend plus efficaces.');
 
+  // Communication, biofilm, défenses
+  const quorumIds = Object.keys(d.quorum || {});
+  if (quorumIds.length && !d.enzymes.synthase_signal) info.push('Les enzymes « quorum » ne s\'activeront qu\'avec le signal d\'autres populations (sans synthase d\'autoinducteur, votre cellule ne fait qu\'écouter).');
+  if (quorumIds.length && d.enzymes.synthase_signal) info.push(`${quorumIds.length} enzyme(s) ne s'activeront que lorsque la population sera dense (quorum sensing).`);
+  if (d.envelope.biofilm && ph.motile) warnings.push('En biofilm, la mobilité est réduite de 85 % dès que la cellule touche ses sœurs.');
+  if (d.envelope.biofilm) info.push('Biofilm : la protection augmente avec le nombre de cellules sœurs collées (jusqu\'à 60 %).');
+  if (consumes('uree')) info.push('L\'uréase libère de l\'ammonium : le milieu autour de la population devient basique.');
+  if (!ph.euk && !ph.crispr && !ph.restriction) info.push('Aucune défense antivirale : en cas d\'invasion de phages, la population sera vulnérable si elle est la plus abondante de sa zone.');
+
   // Carbone et énergie
   const photo = enz.some((e) => e.subs.some((s) => s.i < 0));
   const fixC = consumes('co2') && produces('glucose');

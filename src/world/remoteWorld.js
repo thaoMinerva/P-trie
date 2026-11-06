@@ -92,6 +92,8 @@ export class RemoteWorld {
         if (p) p.update(s); else this.populations.set(s.id, new RemotePop(s));
         this.emit('extinction', this.populations.get(s.id));
       });
+      es.addEventListener('challenges', (e) => this.emit('challenges', JSON.parse(e.data)));
+      es.addEventListener('challengeDone', (e) => this.emit('challengeDone', JSON.parse(e.data)));
       es.addEventListener('chat', (e) => {
         const m = JSON.parse(e.data);
         this.chat.push(m); if (this.chat.length > 150) this.chat.shift();
@@ -101,6 +103,7 @@ export class RemoteWorld {
         const ev = JSON.parse(e.data);
         this.events.push(ev); if (this.events.length > 120) this.events.shift();
         this.emit('event', ev);
+        if (ev.kind === 'env') { const m = /^(\S+)/.exec(ev.text); const type = Object.entries({ '🔥': 'canicule', '❄️': 'froid', '🌧️': 'pluie', '🍂': 'apport', '💊': 'antibiotique', '🦠': 'phages' }).find(([k]) => m && m[1] === k)?.[1]; if (type && !/mutante/.test(ev.text)) this.emit('envEvent', { type }); }
       });
       es.onerror = () => {
         if (first) { es.close(); reject(new Error('Connexion au serveur impossible')); return; }
@@ -120,6 +123,7 @@ export class RemoteWorld {
 
   applyState(s) {
     this.time = s.t;
+    this.envEvents = s.evs || [];
     if (this.env) this.env.lightLevel = s.light;
     this.popOrder = s.pops;
     const seen = new Map();
@@ -137,7 +141,8 @@ export class RemoteWorld {
       c.ph = c.ph && c.ph.radius === a[k + 5] && c.ph.geo === pop.geo ? c.ph : { radius: a[k + 5], geo: pop.geo, wall: pop.design.envelope.wall, B0: 1, V: 1 };
       c.pools[MI.biomass] = a[k + 6];
       c.hue = a[k + 7];
-      c.phase = a[k + 8] ? 'S' : 'G1';
+      const fl = a[k + 8];
+      c.phase = fl & 1 ? 'S' : 'G1'; c.bfN = fl & 2 ? 1 : 0; c.infected = fl & 4 ? { t: 0, strain: 0 } : null;
       c.host = a[k + 9] || null;
       c.partners = a[k + 10] ? [a[k + 10]] : [];
       seen.set(id, c);

@@ -6,6 +6,9 @@ import { RES_LABELS } from '../simulation/population.js';
 import { PARAMS } from '../data/index.js';
 import { isMine, identity } from '../game/identity.js';
 import { help } from './help.js';
+import { renderLineage } from './lineageView.js';
+
+let treePopId = null; // population dont l'arbre des lignées est affiché
 
 const resName = (r) => (r === 'light' ? 'lumière' : RES_LABELS[r] || r);
 
@@ -49,9 +52,14 @@ export function renderPopulations(root, world, progression, ghostSource, actions
         h('p', { class: 'small muted' }, identity.multiplayer ? 'Vrais joueurs connectés au serveur, plus quelques populations fantômes pour animer le monde.' : 'Ces « joueurs » sont générés localement (mode solo). Lancez « npm run multi » pour jouer à plusieurs.'),
         h('div', { class: 'users' }, ghostSource.users().filter((u) => u.id !== identity.id).map((u) => h('div', { class: 'user' },
           h('span', { class: `dot ${u.online ? 'on' : 'off'}` }), h('b', {}, u.name), h('span', { class: 'muted small' }, ` · ${u.profile} · ${u.online ? 'en ligne' : 'hors ligne'}`)))))),
+    (() => {
+      const tp = treePopId && world.populations.get(treePopId);
+      if (!tp) return null;
+      return renderLineage(tp, world, () => { treePopId = null; renderPopulations(root, world, progression, ghostSource, actions); });
+    })(),
     h('section', { class: 'card' }, h('h3', {}, 'Effectifs dans le temps ', help('cycle_cellulaire')), chart),
-    h('section', { class: 'card' }, h('h3', {}, `Vos populations (${mine.length})`), popTable(mine, world, actions, true)),
-    h('section', { class: 'card' }, h('h3', {}, `Populations des autres (${others.length})`), popTable(others, world, actions, false)),
+    h('section', { class: 'card' }, h('h3', {}, `Vos populations (${mine.length})`), popTable(mine, world, { ...actions, tree: (p) => { treePopId = p.id; renderPopulations(root, world, progression, ghostSource, actions); root.querySelector('.lineage')?.scrollIntoView({ behavior: 'smooth' }); } }, true)),
+    h('section', { class: 'card' }, h('h3', {}, `Populations des autres (${others.length})`), popTable(others, world, { ...actions, tree: (p) => { treePopId = p.id; renderPopulations(root, world, progression, ghostSource, actions); root.querySelector('.lineage')?.scrollIntoView({ behavior: 'smooth' }); } }, false)),
   );
   requestAnimationFrame(() => lineChart(chart, popSeries(world, (p) => !p.extinct || world.time - p.extinctAt < 300), { log: true, xFmt: (v) => `${Math.round(v)} s`, yLabel: 'individus (échelle log)' }));
 }
@@ -67,9 +75,9 @@ function popTable(pops, world, actions, mine) {
       h('td', {}, p.name), h('td', {}, p.ownerName), h('td', {}, p.profile || (p.design.type === 'eucaryote' ? 'Eucaryote' : 'Procaryote')),
       h('td', {}, h('b', {}, p.count)), h('td', {}, p.maxCount), h('td', {}, p.maxGeneration), h('td', {}, fmtTime(world.time - p.launchedAt)),
       h('td', { class: 'small' }, p.resourcesUsed.map(resName).join(', ') || '–'),
-      h('td', { class: 'small' }, [p.kills ? `${p.kills} proies` : '', p.symbiosis > 1 ? 'symbiose' : '', p.parasitism > 1 ? 'parasitisme' : ''].filter(Boolean).join(', ') || '–'),
+      h('td', { class: 'small' }, [p.kills ? `${p.kills} proies` : '', p.symbiosis > 1 ? 'symbiose' : '', p.parasitism > 1 ? 'parasitisme' : '', p.hgt ? `${p.hgt} gène(s) acquis` : '', p.immunized ? `${p.immunized} immunisations` : '', p.phageDeaths ? `${p.phageDeaths} lysées par des phages` : ''].filter(Boolean).join(', ') || '–'),
       h('td', {}, fmt(p.score, 1)),
-      h('td', {}, h('button', { class: 'btn small', onclick: () => actions.focus(p) }, 'Voir'), mine ? h('button', { class: 'btn small danger', onclick: () => actions.abandon(p) }, 'Abandonner') : null)))));
+      h('td', {}, h('button', { class: 'btn small', onclick: () => actions.focus(p) }, 'Voir'), h('button', { class: 'btn small', title: 'Arbre des lignées', onclick: () => actions.tree(p) }, `🌳 ${p.strains?.length || 1}`), mine ? h('button', { class: 'btn small danger', onclick: () => actions.abandon(p) }, 'Abandonner') : null)))));
 }
 
 export function renderArchives(root, world, progression) {

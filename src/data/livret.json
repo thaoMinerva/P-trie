@@ -2,9 +2,13 @@
   "_doc": "Livret pédagogique. Chaque section : id (référencé par les boutons « ? » du jeu), title, short (bulle d'aide), body (paragraphes ; **gras**, [[id|lien interne]]), petri (comment le jeu le modélise), wiki (terme de recherche Wikipédia).",
   "chapters": [
     {
-      "id": "cellule", "icon": "🦠", "title": "La cellule",
+      "id": "cellule",
+      "icon": "🦠",
+      "title": "La cellule",
       "sections": [
-        { "id": "cellule", "title": "Qu'est-ce qu'une cellule ?",
+        {
+          "id": "cellule",
+          "title": "Qu'est-ce qu'une cellule ?",
           "short": "La plus petite unité vivante : un compartiment limité par une membrane, qui se nourrit, transforme l'énergie et se reproduit.",
           "body": [
             "Tous les êtres vivants sont faits de cellules. Une cellule est un petit volume d'eau riche en molécules (le **cytoplasme**), séparé du milieu extérieur par une **membrane**. À l'intérieur, des milliers de réactions chimiques catalysées par des [[enzyme|enzymes]] fabriquent de la matière (croissance) et récupèrent de l'énergie (sous forme d'[[atp|ATP]]).",
@@ -12,8 +16,11 @@
             "Les microorganismes (bactéries, archées, levures, amibes, algues unicellulaires…) sont faits d'une seule cellule : c'est d'eux que s'inspire Petri."
           ],
           "petri": "Chaque point du monde est une cellule avec ses propres stocks (ATP, biomasse, NADH, réserves…) recalculés 10 fois par seconde simulée.",
-          "wiki": "Cellule (biologie)" },
-        { "id": "procaryote_eucaryote", "title": "Procaryotes et eucaryotes",
+          "wiki": "Cellule (biologie)"
+        },
+        {
+          "id": "procaryote_eucaryote",
+          "title": "Procaryotes et eucaryotes",
           "short": "Procaryotes (bactéries) : petits, sans noyau, se divisent vite. Eucaryotes : plus grands, avec un noyau et des organites.",
           "body": [
             "Les **procaryotes** (bactéries et archées) n'ont pas de noyau : leur ADN circulaire flotte dans le cytoplasme (le **nucléoïde**). Ils mesurent typiquement 0,5 à 5 µm. Leur respiration et leur photosynthèse se font sur la membrane plasmique, ce qui limite ces fonctions par la [[surface_volume|surface]] disponible.",
@@ -21,8 +28,11 @@
             "Les mitochondries et les chloroplastes sont d'anciennes bactéries « avalées » il y a plus d'un milliard d'années : c'est la théorie de l'[[endosymbiose|endosymbiose]]."
           ],
           "petri": "Procaryotes : rayon 0,4–2,5 µm, division par scissiparité, enzymes « mitochondriales » placées sur la membrane. Eucaryotes : 2,5–10 µm, noyau obligatoire, cycle G1-S-G2-M plus long, accès aux organites et à la phagocytose.",
-          "wiki": "Procaryote" },
-        { "id": "surface_volume", "title": "Forme, taille et rapport surface/volume",
+          "wiki": "Procaryote"
+        },
+        {
+          "id": "surface_volume",
+          "title": "Forme, taille et rapport surface/volume",
           "short": "Tout entre par la surface, mais tout le volume doit être nourri. Plus une cellule grossit, plus son rapport S/V baisse : elle se nourrit moins bien.",
           "body": [
             "Quand une sphère double de rayon, sa surface est multipliée par 4 mais son volume par 8. Le **rapport surface/volume (S/V)** est divisé par deux. Pour une sphère, S/V = 3 / r.",
@@ -30,8 +40,11 @@
             "La **forme** est une parade : un bâtonnet (bacille) fin ou une hélice (spirille) a beaucoup plus de surface qu'une sphère du même volume. À l'inverse, une forme compacte protège mieux : moins de surface à construire en paroi, moins de prise pour les prédateurs et le milieu."
           ],
           "petri": "Le flux de nutriments est proportionnel à la surface (et à la perméabilité), les coûts au volume. La capacité de la membrane des procaryotes dépend aussi de S/V.",
-          "wiki": "Rapport surface sur volume" },
-        { "id": "volume_cellule", "title": "Comment Petri calcule le volume",
+          "wiki": "Rapport surface sur volume"
+        },
+        {
+          "id": "volume_cellule",
+          "title": "Comment Petri calcule le volume",
           "short": "La coupe dessinée est transformée en solide 3D : sphère, ellipsoïde, capsule (bâtonnet), tube hélicoïdal ou solide de révolution pour les formes libres.",
           "body": [
             "Le contour que vous voyez est une **coupe longitudinale** de la cellule. Pour obtenir un volume, Petri imagine le solide obtenu en faisant tourner cette coupe autour de son grand axe, et le découpe en fines tranches (des disques) dont on additionne les volumes.",
@@ -39,21 +52,29 @@
             "Conséquence : allonger une cellule à « taille » fixe (même largeur) augmente son volume **et** sa surface. La cellule coûte plus cher à construire, mais son rapport S/V baisse beaucoup moins que si elle grossissait en restant ronde."
           ],
           "petri": "La « taille » est le rayon (coque), la demi-largeur (bacille), le demi-petit axe (ovale), l'échelle de l'hélice (spirille) ou le rayon équivalent (forme libre).",
-          "wiki": "Solide de révolution" },
-        { "id": "encombrement", "title": "Encombrement du cytoplasme",
+          "wiki": "Solide de révolution"
+        },
+        {
+          "id": "encombrement",
+          "title": "Encombrement du cytoplasme",
           "short": "Organites et enzymes occupent de la place. Au-delà de 70 % du volume, les molécules se gênent et les réactions ralentissent.",
           "body": [
             "Le cytoplasme réel est déjà très encombré : protéines, ARN et ribosomes occupent 20 à 40 % de son volume. On parle d'**encombrement moléculaire** (*molecular crowding*). Plus il est dense, plus la diffusion des molécules ralentit, et plus le cytoplasme devient visqueux, presque gélatineux.",
             "Une cellule ne peut donc pas empiler indéfiniment les enzymes pour aller plus vite : à un moment, chaque enzyme supplémentaire gêne les autres."
           ],
           "petri": "Organites et enzymes sont comptés en fraction du volume : une grande cellule a besoin de proportionnellement autant de machinerie. Au-delà de 70 %, toutes les enzymes ralentissent progressivement (jusqu'à 25 % de leur vitesse à 100 %). Au-dessus de 100 %, la cellule est impossible.",
-          "wiki": "Encombrement moléculaire" }
+          "wiki": "Encombrement moléculaire"
+        }
       ]
     },
     {
-      "id": "enveloppe", "icon": "🧱", "title": "L'enveloppe",
+      "id": "enveloppe",
+      "icon": "🧱",
+      "title": "L'enveloppe",
       "sections": [
-        { "id": "membrane", "title": "La membrane plasmique",
+        {
+          "id": "membrane",
+          "title": "La membrane plasmique",
           "short": "Une double couche de lipides, imperméable aux grosses molécules et aux ions : seules de petites molécules non chargées la traversent seules.",
           "body": [
             "La membrane est une **bicouche de phospholipides** de 7 à 8 nm d'épaisseur. Son cœur gras (hydrophobe) laisse passer les petites molécules neutres comme l'O₂, le CO₂ ou l'éthanol, mais arrête les ions (NH₄⁺, phosphate) et les grosses molécules (glucose, acides aminés, protéines).",
@@ -61,8 +82,11 @@
             "Chez les procaryotes, la membrane porte aussi la chaîne respiratoire et les photosystèmes."
           ],
           "petri": "Chaque métabolite a un mode de transport : « libre » (diffusion), « actif » (pompé, coûte de l'ATP) ou « aucun » (polymères : il faut une enzyme sécrétée pour les découper avant).",
-          "wiki": "Membrane plasmique" },
-        { "id": "diffusion", "title": "Diffusion et transport actif",
+          "wiki": "Membrane plasmique"
+        },
+        {
+          "id": "diffusion",
+          "title": "Diffusion et transport actif",
           "short": "La diffusion va toujours du plus concentré vers le moins concentré, gratuitement. Aller contre ce gradient coûte de l'énergie (ATP).",
           "body": [
             "La **diffusion** est le mouvement spontané des molécules qui tend à égaliser les concentrations. Elle ne coûte rien, mais ne peut que faire entrer ce qui est plus concentré dehors que dedans. Le flux est proportionnel à la différence de concentration et à la surface (loi de Fick).",
@@ -70,8 +94,11 @@
             "La diffusion explique aussi pourquoi les nutriments s'étalent dans le milieu et pourquoi les zones très peuplées s'appauvrissent."
           ],
           "petri": "Dans le monde, les champs de nutriments diffusent d'une case à l'autre. À travers la membrane : flux passif ∝ surface × (concentration dehors − dedans), transport actif à saturation avec 1 ATP par molécule.",
-          "wiki": "Diffusion de la matière" },
-        { "id": "transporteurs", "title": "Protéines membranaires de transport",
+          "wiki": "Diffusion de la matière"
+        },
+        {
+          "id": "transporteurs",
+          "title": "Protéines membranaires de transport",
           "short": "Canaux, symporteurs, transporteurs ABC et pompes d'efflux : chaque protéine laisse passer une molécule précise, parfois en consommant de l'ATP.",
           "body": [
             "Un **canal** (uniport) est un pore sélectif : il accélère la diffusion d'une molécule sans dépense d'énergie, mais seulement dans le sens du gradient.",
@@ -80,8 +107,11 @@
             "Toutes ces protéines occupent de la place dans la membrane : on ne peut pas en mettre à l'infini."
           ],
           "petri": "Les protéines membranaires augmentent la perméabilité pour une molécule ou expulsent les toxines (1 ATP par molécule). Elles occupent une fraction de la surface (max 100 %) et coûtent biomasse et entretien.",
-          "wiki": "Protéine de transport membranaire" },
-        { "id": "paroi", "title": "La paroi cellulaire",
+          "wiki": "Protéine de transport membranaire"
+        },
+        {
+          "id": "paroi",
+          "title": "La paroi cellulaire",
           "short": "Une coque rigide autour de la membrane : protège de l'éclatement osmotique et des prédateurs, mais ralentit les échanges et coûte de la matière.",
           "body": [
             "La plupart des bactéries, champignons, algues et plantes ont une **paroi** au-dessus de leur membrane. Elle résiste à la pression de l'eau qui entre par [[osmose|osmose]], comme la chambre à air dans un pneu.",
@@ -90,8 +120,11 @@
             "Une paroi empêche en revanche la **phagocytose** : une amibe doit pouvoir déformer sa surface pour avaler une proie."
           ],
           "petri": "Matériau + épaisseur : protection contre la prédation, l'osmose et les toxines ; ralentissement des échanges ; masse à construire ∝ surface. Chaque matériau est sensible à une enzyme lytique particulière.",
-          "wiki": "Paroi cellulaire" },
-        { "id": "lysozyme", "title": "Enzymes lytiques : attaquer les parois",
+          "wiki": "Paroi cellulaire"
+        },
+        {
+          "id": "lysozyme",
+          "title": "Enzymes lytiques : attaquer les parois",
           "short": "Lysozyme, chitinase, cellulase : ces enzymes découpent les parois des autres cellules, qui finissent par éclater.",
           "body": [
             "Le **lysozyme** coupe les liaisons entre les sucres du peptidoglycane. On en trouve dans les larmes, la salive et le blanc d'œuf : c'est une défense naturelle contre les bactéries. Les **chitinases** attaquent les parois des champignons, les **cellulases** celles des algues.",
@@ -99,8 +132,11 @@
             "Les antibiotiques de la famille de la pénicilline visent aussi la paroi : ils empêchent sa construction, et la bactérie éclate en grandissant."
           ],
           "petri": "Une enzyme lytique sécrétée crée un champ d'activité dans le milieu ; les cellules dont la paroi y est sensible accumulent des dommages « lyse ». Attention à ne pas attaquer votre propre paroi !",
-          "wiki": "Lysozyme" },
-        { "id": "osmose", "title": "Osmose et salinité",
+          "wiki": "Lysozyme"
+        },
+        {
+          "id": "osmose",
+          "title": "Osmose et salinité",
           "short": "L'eau traverse la membrane vers le côté le plus salé. En eau douce, une cellule sans paroi gonfle et éclate.",
           "body": [
             "L'**osmose** est la diffusion de l'eau à travers une membrane, du milieu le moins concentré en solutés vers le plus concentré. Le cytoplasme est très riche en molécules : en eau douce (milieu **hypotonique**), l'eau entre en continu et la cellule gonfle.",
@@ -108,16 +144,22 @@
             "À l'inverse, en milieu très salé (**hypertonique**), la cellule perd son eau et se ratatine. Les vacuoles de stockage aident à tamponner ce stress."
           ],
           "petri": "La salinité varie dans le monde. En eau douce, le stress osmotique dépend du rapport S/V, réduit par la paroi et la vacuole contractile. Il provoque des dommages « osmose ».",
-          "wiki": "Osmose" },
-        { "id": "capsule", "title": "La capsule",
+          "wiki": "Osmose"
+        },
+        {
+          "id": "capsule",
+          "title": "La capsule",
           "short": "Une couche gluante de sucres autour de la paroi : protège contre les prédateurs et les toxines, mais freine un peu les échanges.",
           "body": [
             "Beaucoup de bactéries s'entourent d'une **capsule** de polysaccharides. Elle rend la cellule glissante et difficile à avaler pour les cellules qui la chassent (amibes, globules blancs). C'est un facteur de virulence de nombreux pathogènes, comme le pneumocoque.",
             "La capsule retient aussi l'eau et protège du dessèchement et de certaines substances toxiques."
           ],
           "petri": "Capsule : protection supplémentaire contre la prédation et les toxines, masse ∝ surface, échanges un peu ralentis.",
-          "wiki": "Capsule bactérienne" },
-        { "id": "mobilite", "title": "Se déplacer : flagelles et cils",
+          "wiki": "Capsule bactérienne"
+        },
+        {
+          "id": "mobilite",
+          "title": "Se déplacer : flagelles et cils",
           "short": "Les flagelles tournent comme des hélices, les cils battent comme des rames. Bouger coûte de l'ATP et permet de chercher la nourriture.",
           "body": [
             "Le **flagelle bactérien** est un véritable moteur rotatif, alimenté par un flux d'ions H⁺ à travers la membrane. Les eucaryotes ont des flagelles et des **cils** qui ondulent ou battent grâce à des protéines motrices consommant de l'ATP.",
@@ -125,13 +167,18 @@
             "Les bactéries mobiles pratiquent la **chimiotaxie** : elles nagent tout droit tant que la nourriture augmente, et changent de direction au hasard quand elle diminue."
           ],
           "petri": "Les cellules mobiles remontent les gradients de nutriments (ou de lumière). La vitesse baisse avec la taille ; le coût croît avec la vitesse. Les cellules immobiles ne bougent que par agitation brownienne.",
-          "wiki": "Chimiotactisme" }
+          "wiki": "Chimiotactisme"
+        }
       ]
     },
     {
-      "id": "enzymes", "icon": "⚗️", "title": "Les enzymes",
+      "id": "enzymes",
+      "icon": "⚗️",
+      "title": "Les enzymes",
       "sections": [
-        { "id": "enzyme", "title": "Qu'est-ce qu'une enzyme ?",
+        {
+          "id": "enzyme",
+          "title": "Qu'est-ce qu'une enzyme ?",
           "short": "Une protéine qui accélère une réaction chimique précise, des millions de fois, sans être consommée.",
           "body": [
             "Une **enzyme** est un catalyseur biologique, presque toujours une protéine. Elle fixe une ou plusieurs molécules (les **substrats**) dans une poche appelée [[site_actif|site actif]], les transforme en **produits**, puis les relâche et recommence.",
@@ -139,8 +186,11 @@
             "Le métabolisme est un réseau de **voies** : le produit d'une enzyme est le substrat de la suivante. Sans l'enzyme d'une étape, la voie s'arrête et le produit intermédiaire s'accumule."
           ],
           "petri": "Chaque enzyme de Petri regroupe une voie métabolique simplifiée (par exemple « glycolyse » = 10 enzymes réelles). Sa vitesse dépend de sa concentration, du substrat, de la température et du pH.",
-          "wiki": "Enzyme" },
-        { "id": "michaelis", "title": "Cinétique de Michaelis-Menten",
+          "wiki": "Enzyme"
+        },
+        {
+          "id": "michaelis",
+          "title": "Cinétique de Michaelis-Menten",
           "short": "v = Vmax·[S] / (Km + [S]) : la vitesse augmente avec le substrat puis plafonne. Km = concentration qui donne la moitié de la vitesse maximale.",
           "body": [
             "Quand il y a peu de substrat, une enzyme passe son temps à attendre : la vitesse est proportionnelle à la concentration du substrat. Quand il y en a beaucoup, l'enzyme est **saturée** : elle travaille au maximum, à la vitesse **Vmax**.",
@@ -149,8 +199,11 @@
             "Il existe un **compromis** : une enzyme qui serre très fort son substrat (Km bas) a souvent du mal à libérer le produit, donc un kcat plus faible."
           ],
           "petri": "Toutes les réactions suivent Michaelis-Menten (un terme par substrat). Dans l'atelier, le curseur « compromis » échange affinité et vitesse ; la courbe montre v en fonction de [S].",
-          "wiki": "Équation de Michaelis-Menten" },
-        { "id": "temperature_ph", "title": "Température et pH",
+          "wiki": "Équation de Michaelis-Menten"
+        },
+        {
+          "id": "temperature_ph",
+          "title": "Température et pH",
           "short": "Chaque enzyme a une température et un pH optimaux. Trop chaud, elle se déforme (dénaturation) ; trop acide ou basique, son site actif ne fonctionne plus.",
           "body": [
             "La chaleur accélère les réactions chimiques, mais au-delà d'un certain seuil la protéine se **dénature** : elle se déplie et perd sa forme, comme le blanc d'œuf qui cuit. L'activité forme donc une courbe en cloche autour d'une **température optimale**.",
@@ -158,8 +211,11 @@
             "Les **extrêmophiles** vivent là où les autres meurent : sources chaudes à 80 °C et plus, lacs acides, saumures. Leurs enzymes sont stabilisées par des liaisons supplémentaires."
           ],
           "petri": "Activité multipliée par une cloche gaussienne en T et en pH. Hors de la zone de tolérance, la cellule accumule des dommages « chaleur », « froid » ou « pH ». La brique « stabilisation » élargit la tolérance.",
-          "wiki": "Dénaturation des protéines" },
-        { "id": "site_actif", "title": "Site actif et domaines",
+          "wiki": "Dénaturation des protéines"
+        },
+        {
+          "id": "site_actif",
+          "title": "Site actif et domaines",
           "short": "Le site actif est la poche où la réaction a lieu. Des domaines supplémentaires ajoutent une régulation, une stabilité ou une localisation.",
           "body": [
             "Une protéine est une chaîne d'acides aminés repliée en 3D. Elle est souvent formée de plusieurs **domaines**, des modules qui se replient indépendamment et ont chacun un rôle : fixer un cofacteur, s'ancrer dans la membrane, réguler l'activité…",
@@ -167,8 +223,11 @@
             "Chaque domaine ajouté allonge la protéine : elle coûte plus cher à fabriquer."
           ],
           "petri": "Atelier : un site actif (affinité, vitesse) + jusqu'à 3 domaines + un peptide signal. Chaque brique modifie Km, kcat, la tolérance ou le coût. Les bilans de matière et d'énergie sont vérifiés.",
-          "wiki": "Domaine protéique" },
-        { "id": "regulation", "title": "Régulation et rétro-inhibition",
+          "wiki": "Domaine protéique"
+        },
+        {
+          "id": "regulation",
+          "title": "Régulation et rétro-inhibition",
           "short": "Les cellules ne gaspillent pas : une voie s'arrête quand son produit est abondant, ou ne s'active que quand l'énergie manque.",
           "body": [
             "En **rétro-inhibition** (*feedback*), le produit final d'une voie se fixe sur la première enzyme et la freine. Quand la cellule a assez d'acides aminés, elle arrête de les fabriquer.",
@@ -176,37 +235,51 @@
             "Un **inhibiteur** est une molécule qui ralentit une enzyme. **Ki** est la concentration d'inhibiteur qui divise l'activité par deux."
           ],
           "petri": "Régulations disponibles : « ATP haut », « ATP bas » et rétro-inhibition par le produit principal. Les inhibiteurs sont modélisés par un facteur Ki / (Ki + [I]).",
-          "wiki": "Rétro-inhibition" },
-        { "id": "cooperativite", "title": "Coopérativité (équation de Hill)",
+          "wiki": "Rétro-inhibition"
+        },
+        {
+          "id": "cooperativite",
+          "title": "Coopérativité (équation de Hill)",
           "short": "Certaines enzymes réagissent en « tout ou rien » : presque inactives sous un seuil de substrat, très actives au-dessus. On parle de réponse sigmoïde.",
           "body": [
             "Une enzyme formée de plusieurs sous-unités peut voir chaque sous-unité faciliter la fixation du substrat sur les autres : c'est la **coopérativité**. Le plus célèbre exemple n'est pas une enzyme mais l'hémoglobine, qui fixe l'O₂.",
             "La vitesse suit alors l'**équation de Hill** : v = Vmax · [S]ⁿ / (Kⁿ + [S]ⁿ). Avec n > 1, la courbe prend une forme en S : l'enzyme agit comme un interrupteur."
           ],
           "petri": "Brique « coopérativité » : coefficient de Hill > 1 sur les substrats principaux (pas sur les cofacteurs).",
-          "wiki": "Équation de Hill (biochimie)" },
-        { "id": "adressage", "title": "Peptide signal et adressage",
+          "wiki": "Équation de Hill (biochimie)"
+        },
+        {
+          "id": "adressage",
+          "title": "Peptide signal et adressage",
           "short": "Une courte étiquette au début de la protéine indique où l'envoyer : cytoplasme, membrane, mitochondrie, chloroplaste ou hors de la cellule.",
           "body": [
             "Les protéines sont fabriquées dans le cytoplasme par les ribosomes. Une petite séquence d'acides aminés en tête de chaîne, le **peptide signal**, sert d'adresse postale : la machinerie cellulaire l'envoie vers le bon compartiment.",
             "Chez les eucaryotes, les protéines sécrétées passent par le [[organites|réticulum endoplasmique et l'appareil de Golgi]]."
           ],
           "petri": "Le peptide signal fixe la localisation de l'enzyme. La capacité dépend du compartiment : membrane (surface), mitochondries et chloroplastes (nombre d'organites), sécrétion (réticulum).",
-          "wiki": "Peptide signal" },
-        { "id": "enzymes_secretees", "title": "Enzymes sécrétées (exoenzymes)",
+          "wiki": "Peptide signal"
+        },
+        {
+          "id": "enzymes_secretees",
+          "title": "Enzymes sécrétées (exoenzymes)",
           "short": "Pour manger une grosse molécule (amidon, protéine, cellulose), il faut d'abord la découper dehors avec des enzymes relâchées dans le milieu.",
           "body": [
             "Les polymères (amidon, cellulose, protéines, ADN) sont trop gros pour traverser la membrane. Les bactéries et les champignons **sécrètent** des enzymes digestives qui les découpent en petites briques (glucose, acides aminés, nucléotides), qu'ils absorbent ensuite.",
             "Ces enzymes travaillent dehors : leurs produits profitent aussi aux voisins, y compris aux concurrents qui n'ont rien payé. C'est un exemple classique de **bien commun** en écologie microbienne, et des « tricheurs » peuvent en profiter."
           ],
           "petri": "Les enzymes sécrétées agissent sur le champ du milieu autour de la cellule. Le calque « Enzymes sécrétées » montre leur activité. Les produits sont relâchés dans le milieu, à disposition de tous.",
-          "wiki": "Exoenzyme" }
+          "wiki": "Exoenzyme"
+        }
       ]
     },
     {
-      "id": "energie", "icon": "⚡", "title": "Énergie et matière",
+      "id": "energie",
+      "icon": "⚡",
+      "title": "Énergie et matière",
       "sections": [
-        { "id": "atp", "title": "L'ATP, monnaie énergétique",
+        {
+          "id": "atp",
+          "title": "L'ATP, monnaie énergétique",
           "short": "L'ATP stocke l'énergie dans ses liaisons phosphate. La cellule le fabrique en dégradant des nutriments et le dépense pour tout le reste.",
           "body": [
             "L'**ATP** (adénosine triphosphate) est la monnaie d'échange énergétique de toutes les cellules. En perdant un phosphate, il devient de l'**ADP** et libère de l'énergie qui sert à construire des protéines, pomper des molécules, bouger…",
@@ -214,8 +287,11 @@
             "Même sans grandir, une cellule dépense de l'ATP pour **s'entretenir** : remplacer les protéines abîmées, maintenir ses gradients d'ions. C'est le coût de maintenance."
           ],
           "petri": "L'ATP est plafonné (∝ volume). Entretien = coût de base × volume + coûts des organites, enzymes et de la mobilité. Sans ATP, la cellule accumule des dommages « famine » puis meurt.",
-          "wiki": "Adénosine triphosphate" },
-        { "id": "redox", "title": "NAD⁺ / NADH : les électrons",
+          "wiki": "Adénosine triphosphate"
+        },
+        {
+          "id": "redox",
+          "title": "NAD⁺ / NADH : les électrons",
           "short": "Dégrader un sucre, c'est en arracher des électrons. Le NAD⁺ les transporte (devenant NADH) et doit les déposer quelque part pour être réutilisé.",
           "body": [
             "La plupart des réactions qui libèrent de l'énergie sont des **oxydations** : on retire des électrons à une molécule. Le **NAD⁺** les récupère et devient **NADH**.",
@@ -223,8 +299,11 @@
             "En photosynthèse, c'est l'inverse : la lumière arrache des électrons à l'eau pour fabriquer du NADPH, qui sert à réduire le CO₂ en sucre."
           ],
           "petri": "Le pool NAD + NADH est fixe (∝ volume). La barre « NADH / NAD » de la fiche montre la part réduite : si elle reste à 100 %, votre cellule n'a pas de quoi réoxyder son NADH.",
-          "wiki": "Nicotinamide adénine dinucléotide" },
-        { "id": "energie_libre", "title": "Énergie libre (ΔG)",
+          "wiki": "Nicotinamide adénine dinucléotide"
+        },
+        {
+          "id": "energie_libre",
+          "title": "Énergie libre (ΔG)",
           "short": "Une réaction ne se fait spontanément que si elle libère de l'énergie (ΔG < 0). Pour fabriquer de l'ATP, il faut « casser » quelque chose de plus riche.",
           "body": [
             "L'**énergie libre de Gibbs** (ΔG) indique si une réaction peut se produire d'elle-même. Si ΔG < 0 (réaction **exergonique**), elle libère de l'énergie ; si ΔG > 0, il faut lui en fournir.",
@@ -232,8 +311,11 @@
             "Ordres de grandeur réels : l'oxydation complète d'un glucose permet environ 30 ATP, la fermentation seulement 2."
           ],
           "petri": "Chaque molécule a une énergie en « ATP-équivalents ». L'atelier refuse toute enzyme dont les produits contiendraient plus d'énergie que les substrats.",
-          "wiki": "Enthalpie libre" },
-        { "id": "conservation", "title": "Conservation de la matière",
+          "wiki": "Enthalpie libre"
+        },
+        {
+          "id": "conservation",
+          "title": "Conservation de la matière",
           "short": "Rien ne se perd, rien ne se crée : les atomes de carbone, d'azote et de phosphore entrant dans une réaction en ressortent tous.",
           "body": [
             "« Rien ne se perd, rien ne se crée, tout se transforme » (attribué à Lavoisier). Dans une réaction chimique, les atomes sont réarrangés, jamais créés ni détruits. Les équations doivent être **équilibrées**.",
@@ -241,13 +323,18 @@
             "À l'échelle du monde, la matière circule : les cadavres sont décomposés, leurs éléments retournent au milieu et nourrissent d'autres cellules. Ce sont les **cycles biogéochimiques**."
           ],
           "petri": "Le moteur vérifie la conservation du carbone (C), de l'azote (N), du phosphore (P) et du NAD sur chaque réaction ; les tests automatiques contrôlent qu'aucune matière n'apparaît dans le monde.",
-          "wiki": "Loi de conservation de la masse" }
+          "wiki": "Loi de conservation de la masse"
+        }
       ]
     },
     {
-      "id": "metabolismes", "icon": "🔥", "title": "Les métabolismes",
+      "id": "metabolismes",
+      "icon": "🔥",
+      "title": "Les métabolismes",
       "sections": [
-        { "id": "metabolisme", "title": "Vue d'ensemble du métabolisme",
+        {
+          "id": "metabolisme",
+          "title": "Vue d'ensemble du métabolisme",
           "short": "Catabolisme (dégrader pour gagner de l'énergie) et anabolisme (construire avec cette énergie). Il faut une source de carbone, d'énergie et d'azote.",
           "body": [
             "Le **catabolisme** dégrade des molécules pour récupérer de l'énergie (ATP) et des électrons (NADH). L'**anabolisme** utilise cette énergie pour construire la cellule : protéines, membranes, ADN.",
@@ -255,16 +342,22 @@
             "Une cellule viable doit avoir au minimum : une source de carbone, une voie qui produit de l'ATP, une façon de réoxyder le NADH et une source d'azote."
           ],
           "petri": "Les kits de l'éditeur rassemblent des voies cohérentes (fermentation, respiration, photosynthèse…). Le bilan de viabilité vérifie les quatre conditions ci-dessus.",
-          "wiki": "Métabolisme" },
-        { "id": "glycolyse", "title": "La glycolyse",
+          "wiki": "Métabolisme"
+        },
+        {
+          "id": "glycolyse",
+          "title": "La glycolyse",
           "short": "Le glucose est coupé en deux pyruvates, ce qui rapporte 2 ATP et 2 NADH. Voie très ancienne, présente chez presque tous les êtres vivants.",
           "body": [
             "La **glycolyse** est une suite de 10 réactions dans le cytoplasme : glucose (6 carbones) → 2 pyruvates (3 carbones). Elle rapporte 2 ATP et 2 NADH par glucose, sans oxygène.",
             "Le pyruvate a ensuite deux destins : être oxydé complètement par la [[respiration|respiration]] (beaucoup d'ATP) ou être transformé par [[fermentation|fermentation]] pour régénérer le NAD⁺."
           ],
           "petri": "« Glycolyse » : glucose + 2 ADP → 2 pyruvate + 2 ATP + 2 NADH (simplifié).",
-          "wiki": "Glycolyse" },
-        { "id": "fermentation", "title": "Les fermentations",
+          "wiki": "Glycolyse"
+        },
+        {
+          "id": "fermentation",
+          "title": "Les fermentations",
           "short": "Sans oxygène, la cellule recycle son NADH en transformant le pyruvate en lactate ou en éthanol + CO₂. Peu rentable, mais rapide et sans O₂.",
           "body": [
             "La **fermentation** ne produit pas d'ATP en elle-même : elle sert à réoxyder le NADH de la glycolyse pour que celle-ci continue. Bilan : seulement 2 ATP par glucose.",
@@ -272,8 +365,11 @@
             "Les déchets (lactate, éthanol) contiennent encore beaucoup d'énergie : d'autres microbes peuvent les consommer. Le lactate acidifie le milieu."
           ],
           "petri": "Les fermenteurs libèrent lactate ou éthanol dans le milieu, que d'autres populations peuvent respirer. Le lactate fait baisser le pH local.",
-          "wiki": "Fermentation" },
-        { "id": "respiration", "title": "Respiration : Krebs et chaîne respiratoire",
+          "wiki": "Fermentation"
+        },
+        {
+          "id": "respiration",
+          "title": "Respiration : Krebs et chaîne respiratoire",
           "short": "Le pyruvate est entièrement oxydé en CO₂ ; les électrons sont donnés à l'O₂. Rapporte environ 15 fois plus d'ATP que la fermentation.",
           "body": [
             "Le **cycle de Krebs** démonte le pyruvate en CO₂ et charge ses électrons sur du NADH. La **chaîne respiratoire**, dans la membrane (des mitochondries, ou de la bactérie), fait passer ces électrons jusqu'à l'**O₂**, qui devient de l'eau.",
@@ -281,8 +377,11 @@
             "Sans O₂, la chaîne s'arrête. Et comme elle est dans une membrane, sa capacité dépend de la surface (procaryotes) ou du nombre de mitochondries (eucaryotes)."
           ],
           "petri": "« Krebs » produit NADH et CO₂ ; « chaîne respiratoire » consomme NADH + O₂ et produit beaucoup d'ATP, avec un peu d'espèces réactives de l'oxygène.",
-          "wiki": "Respiration cellulaire" },
-        { "id": "photosynthese", "title": "La photosynthèse",
+          "wiki": "Respiration cellulaire"
+        },
+        {
+          "id": "photosynthese",
+          "title": "La photosynthèse",
           "short": "La lumière fournit l'énergie (ATP, NADPH) ; le cycle de Calvin l'utilise pour fixer le CO₂ en glucose. Libère de l'O₂.",
           "body": [
             "Les **photosystèmes**, riches en chlorophylle, captent la lumière et arrachent des électrons à l'eau : cela produit de l'ATP, du pouvoir réducteur et libère de l'**O₂**. C'est l'origine de presque tout l'oxygène de l'atmosphère, apparu grâce aux cyanobactéries il y a ~2,4 milliards d'années.",
@@ -290,8 +389,11 @@
             "La nuit, la cellule photosynthétique doit vivre sur ses réserves ou respirer."
           ],
           "petri": "Les photosystèmes dépendent de la lumière locale (plus forte en haut du monde, cycle jour/nuit). Procaryotes : sur la membrane (thylakoïdes) ; eucaryotes : chloroplastes obligatoires.",
-          "wiki": "Photosynthèse" },
-        { "id": "azote", "title": "Azote : acides aminés et fixation",
+          "wiki": "Photosynthèse"
+        },
+        {
+          "id": "azote",
+          "title": "Azote : acides aminés et fixation",
           "short": "Les protéines contiennent de l'azote. On peut le prendre sous forme d'ammonium, d'acides aminés… ou fixer le N₂ de l'air, à grand prix.",
           "body": [
             "Pour fabriquer des **acides aminés** (les briques des protéines), il faut des squelettes carbonés et de l'azote, le plus souvent sous forme d'**ammonium** (NH₄⁺).",
@@ -299,37 +401,63 @@
             "La **désamination** est le chemin inverse : on retire l'azote des acides aminés pour brûler leur squelette carboné, en relâchant du NH₄⁺."
           ],
           "petri": "Biomasse = protéines : sa synthèse consomme des acides aminés et de l'ATP. La fixation de l'azote est inhibée par l'O₂.",
-          "wiki": "Fixation de l'azote" },
-        { "id": "reserves", "title": "Réserves : glycogène et amidon",
+          "wiki": "Fixation de l'azote"
+        },
+        {
+          "id": "reserves",
+          "title": "Réserves : glycogène et amidon",
           "short": "En période d'abondance, la cellule stocke le glucose sous forme de polymère ; elle le ressort quand la nourriture ou la lumière manquent.",
           "body": [
             "Le glucose libre en grande quantité perturberait l'osmose. Les cellules le stockent en longues chaînes : **glycogène** (bactéries, champignons, animaux) ou **amidon** (algues, plantes). Certaines bactéries stockent aussi du phosphate (polyphosphate) ou des lipides.",
             "Les réserves font la différence entre la vie et la mort pendant la nuit ou une disette."
           ],
           "petri": "Glycogène synthase (active si ATP haut) et phosphorylase (active si ATP bas). La capacité de stockage augmente avec les vacuoles ou les granules.",
-          "wiki": "Glycogène" },
-        { "id": "ros", "title": "Stress oxydatif",
+          "wiki": "Glycogène"
+        },
+        {
+          "id": "ros",
+          "title": "Stress oxydatif",
           "short": "Respirer et photosynthétiser produit des espèces réactives de l'oxygène qui abîment l'ADN et les protéines. La catalase les neutralise.",
           "body": [
             "La chaîne respiratoire et les photosystèmes laissent parfois « fuir » un électron vers l'O₂, ce qui forme des **espèces réactives de l'oxygène** (ROS) : superoxyde, eau oxygénée… Très réactives, elles abîment l'ADN, les protéines et les lipides.",
             "Les cellules aérobies se défendent avec des enzymes comme la **catalase** et la superoxyde dismutase. Les organismes strictement anaérobies n'en ont souvent pas : pour eux, l'O₂ est un poison."
           ],
           "petri": "Les voies aérobies produisent des ROS internes ; sans catalase ou peroxysomes, ils causent des dommages « stress oxydatif ».",
-          "wiki": "Stress oxydant" },
-        { "id": "toxines", "title": "Toxines et guerre chimique",
+          "wiki": "Stress oxydant"
+        },
+        {
+          "id": "toxines",
+          "title": "Toxines et guerre chimique",
           "short": "Certaines cellules sécrètent des toxines pour tuer leurs concurrents. Il faut alors se protéger soi-même (pompe d'efflux, détoxification).",
           "body": [
             "Les microbes se livrent une véritable guerre chimique : **bactériocines** chez les bactéries, **antibiotiques** chez les champignons et les actinobactéries (la pénicilline vient d'une moisissure).",
             "Produire une toxine coûte de l'énergie, et le producteur doit être résistant à sa propre arme (enzyme de détoxification, pompes d'efflux, paroi imperméable)."
           ],
           "petri": "Les toxines diffusent dans le milieu et causent des dommages « toxines » ; paroi, capsule, détoxifiase et pompes d'efflux protègent.",
-          "wiki": "Bactériocine" }
+          "wiki": "Bactériocine"
+        },
+        {
+          "id": "antibiotiques",
+          "title": "Antibiotiques et résistance",
+          "short": "Un antibiotique β-lactame (comme la pénicilline) empêche les bactéries de construire leur paroi : elles éclatent en grandissant. La β-lactamase le détruit.",
+          "body": [
+            "La **pénicilline**, découverte par Alexander Fleming en 1928, est produite par une moisissure (*Penicillium*). Comme les autres **β-lactames**, elle bloque les enzymes qui relient les briques du **peptidoglycane**. Une bactérie qui grandit ne peut plus agrandir sa paroi : la pression de l'eau la fait éclater. Les cellules au repos, elles, survivent souvent.",
+            "Les bactéries résistent de plusieurs façons : la **β-lactamase** coupe l'antibiotique (et protège même les voisines), les **pompes d'efflux** le rejettent, le **biofilm** le retient. Les archées, les eucaryotes et les bactéries sans paroi ne sont pas touchés.",
+            "Les gènes de résistance circulent entre bactéries par [[transfert_genes|transfert horizontal]] : c'est l'une des grandes menaces de santé publique actuelles."
+          ],
+          "petri": "L'antibiotique abîme les bactéries à paroi de peptidoglycane, surtout celles qui grandissent. Il arrive lors d'un événement « moisissure » et se dégrade lentement. Défenses : β-lactamase, pompe d'efflux sur mesure, biofilm.",
+          "wiki": "Bêta-lactamine"
+        }
       ]
     },
     {
-      "id": "organites", "icon": "🫧", "title": "Les organites",
+      "id": "organites",
+      "icon": "🫧",
+      "title": "Les organites",
       "sections": [
-        { "id": "organites", "title": "Les organites des eucaryotes",
+        {
+          "id": "organites",
+          "title": "Les organites des eucaryotes",
           "short": "Des compartiments spécialisés : noyau (ADN), mitochondries (respiration), chloroplastes (photosynthèse), réticulum et Golgi (protéines), lysosomes (digestion)…",
           "body": [
             "**Noyau** : enferme l'ADN dans une double membrane et contrôle le cycle cellulaire. **Ribosomes** : fabriquent les protéines (procaryotes et eucaryotes en ont). **Réticulum endoplasmique et Golgi** : fabriquent, modifient et expédient les protéines, notamment celles qui sont sécrétées.",
@@ -338,29 +466,40 @@
             "Chez les procaryotes, il n'y a pas d'organites membranaires classiques, mais des structures comparables : **thylakoïdes** des cyanobactéries, **granules** de réserve."
           ],
           "petri": "Chaque organite occupe une fraction du volume, coûte biomasse et ATP d'entretien, et apporte un effet (capacité respiratoire, stockage, sécrétion…). L'atelier d'organites permet d'en inventer.",
-          "wiki": "Organite" },
-        { "id": "endosymbiose", "title": "L'endosymbiose",
+          "wiki": "Organite"
+        },
+        {
+          "id": "endosymbiose",
+          "title": "L'endosymbiose",
           "short": "Mitochondries et chloroplastes sont d'anciennes bactéries avalées et domestiquées. Ils ont encore leur propre ADN et une double membrane.",
           "body": [
             "Il y a environ 1,5 à 2 milliards d'années, une cellule ancestrale a englobé une bactérie respiratoire sans la digérer. L'association a été si avantageuse qu'elle est devenue permanente : la bactérie est devenue la **mitochondrie**. Plus tard, une cellule a fait de même avec une cyanobactérie : le **chloroplaste**.",
             "Preuves : ces organites ont une **double membrane**, leur propre **ADN circulaire** (comme les bactéries), leurs propres ribosomes de type bactérien, et se divisent par scissiparité. Cette théorie a été popularisée par Lynn Margulis."
           ],
           "petri": "Dans l'atelier d'organites, l'enveloppe « double membrane » est requise pour les modules de type respiratoire ou photosynthétique.",
-          "wiki": "Endosymbiose" },
-        { "id": "phagocytose", "title": "Phagocytose",
+          "wiki": "Endosymbiose"
+        },
+        {
+          "id": "phagocytose",
+          "title": "Phagocytose",
           "short": "Une cellule sans paroi peut déformer sa membrane pour englober une proie plus petite, puis la digérer dans ses lysosomes.",
           "body": [
             "La **phagocytose** (« manger une cellule ») est pratiquée par les amibes, les paramécies et nos globules blancs. La membrane entoure la proie et forme une vésicule, le **phagosome**, qui fusionne avec des **lysosomes** remplis d'enzymes digestives.",
             "Il faut une membrane souple (donc pas de paroi rigide) et une taille nettement supérieure à celle de la proie."
           ],
           "petri": "Phagocytose possible pour les eucaryotes avec lysosomes et paroi absente ou très fine, sur des proies au moins 1,6 fois plus petites. La capsule et la paroi de la proie la protègent.",
-          "wiki": "Phagocytose" }
+          "wiki": "Phagocytose"
+        }
       ]
     },
     {
-      "id": "nucleiques", "icon": "🧬", "title": "ADN et ARN",
+      "id": "nucleiques",
+      "icon": "🧬",
+      "title": "ADN et ARN",
       "sections": [
-        { "id": "adn_arn", "title": "ADN, ARN et nucléotides",
+        {
+          "id": "adn_arn",
+          "title": "ADN, ARN et nucléotides",
           "short": "L'ADN stocke l'information génétique ; l'ARN la copie et sert à fabriquer les protéines. Tous deux sont des chaînes de nucléotides, riches en phosphore.",
           "body": [
             "L'**ADN** est une longue double hélice dont la séquence de 4 lettres (A, T, G, C) code les protéines. Pour l'utiliser, la cellule en recopie des morceaux en **ARN messager** (transcription), lu par les ribosomes (traduction). Les ribosomes eux-mêmes sont faits en grande partie d'ARN.",
@@ -368,21 +507,60 @@
             "Une cellule qui croît vite a beaucoup d'ARN (beaucoup de ribosomes)."
           ],
           "petri": "L'ARN cellulaire accélère les ribosomes (croissance), l'ADN de réparation réduit les dommages. Les cadavres relâchent ADN et ARN dans le milieu.",
-          "wiki": "Acide nucléique" },
-        { "id": "polymerases", "title": "Polymérases et nucléases",
+          "wiki": "Acide nucléique"
+        },
+        {
+          "id": "polymerases",
+          "title": "Polymérases et nucléases",
           "short": "Les polymérases assemblent des nucléotides en ADN ou ARN ; les nucléases (ADNase, ARNase) les découpent. Elles permettent de recycler les acides nucléiques.",
           "body": [
             "L'**ADN polymérase** copie l'ADN avant chaque division (réplication), l'**ARN polymérase** fabrique l'ARN. Elles consomment des nucléotides et de l'énergie.",
             "Les **nucléases** font l'inverse : les **ADNases** et **ARNases** découpent les acides nucléiques en nucléotides. Beaucoup de bactéries en sécrètent pour récupérer le phosphore et l'azote de l'ADN libéré par les cellules mortes."
           ],
           "petri": "ADNase/ARNase sécrétées : ADN et ARN du milieu → nucléotides. Une nucléotidase en tire phosphate et carbone ; les polymérases transforment les nucléotides en ARN/ADN cellulaire.",
-          "wiki": "Nucléase" }
+          "wiki": "Nucléase"
+        }
       ]
     },
     {
-      "id": "vie", "icon": "🔁", "title": "Croissance et évolution",
+      "id": "virus",
+      "icon": "🦠",
+      "title": "Virus et défenses",
       "sections": [
-        { "id": "cycle_cellulaire", "title": "Croissance et division",
+        {
+          "id": "phages",
+          "title": "Les bactériophages",
+          "short": "Des virus de bactéries : ils injectent leur ADN, détournent la cellule pour fabriquer des copies d'eux-mêmes, puis la font éclater.",
+          "body": [
+            "Un **bactériophage** (« mangeur de bactéries ») est un virus : une capsule de protéines qui contient de l'ADN, sans métabolisme propre. Il se fixe sur un **récepteur** précis de la surface bactérienne, injecte son génome, puis la cellule infectée fabrique des dizaines à des centaines de nouveaux virions. Au bout de quelques dizaines de minutes, elle **éclate** (lyse) et les libère.",
+            "Chaque phage ne reconnaît que quelques espèces, voire quelques souches : il est **spécifique de son hôte**. Les phages font proliférer… les phages de l'espèce la plus abondante, puisque c'est là qu'ils trouvent le plus d'hôtes. Ce principe, appelé « **kill the winner** », empêche une seule espèce de tout dominer et maintient la diversité.",
+            "Les phages sont les entités biologiques les plus nombreuses de la planète (environ 10³¹). Ils tuent chaque jour une grande partie des bactéries des océans. On les utilise aussi en médecine contre les bactéries résistantes (**phagothérapie**)."
+          ],
+          "petri": "Les phages arrivent lors d'un événement et ciblent l'espèce bactérienne la plus nombreuse de la zone. Une cellule infectée ne se divise plus et éclate au bout de 20 s en libérant des virions. En mutant, un phage peut échapper aux mémoires CRISPR ou changer d'espèce hôte.",
+          "wiki": "Bactériophage"
+        },
+        {
+          "id": "crispr",
+          "title": "CRISPR et enzymes de restriction",
+          "short": "Les bactéries ont un système immunitaire : les enzymes de restriction découpent tout ADN étranger, et CRISPR-Cas garde en mémoire les virus déjà rencontrés.",
+          "body": [
+            "Les **enzymes de restriction** reconnaissent de courtes séquences d'ADN et les coupent ; la bactérie protège son propre ADN en le marquant chimiquement. C'est une défense **innée**, efficace contre n'importe quel virus, mais pas à chaque fois.",
+            "**CRISPR-Cas** est une immunité **adaptative**. Quand une bactérie survit à une infection, elle intègre un fragment de l'ADN du virus dans son propre génome, comme une photo d'identité. Ses descendantes fabriquent des ARN guides qui permettent à la protéine Cas de reconnaître et de découper ce virus. La mémoire est héritée.",
+            "Les virus répondent en **mutant** : un phage dont la séquence a changé n'est plus reconnu. C'est une **course aux armements** permanente. En 2012, Emmanuelle Charpentier et Jennifer Doudna ont transformé CRISPR-Cas9 en outil pour modifier les génomes (prix Nobel de chimie 2020)."
+          ],
+          "petri": "Organites « Système CRISPR-Cas » (chance de mémoriser la souche, mémoire de 4 souches transmise aux filles) et « Enzymes de restriction » (chance de détruire n'importe quel phage à l'entrée). Une capsule et un biofilm réduisent aussi l'adsorption.",
+          "wiki": "CRISPR"
+        }
+      ]
+    },
+    {
+      "id": "vie",
+      "icon": "🔁",
+      "title": "Croissance et évolution",
+      "sections": [
+        {
+          "id": "cycle_cellulaire",
+          "title": "Croissance et division",
           "short": "Une cellule grandit (G1), copie son ADN (S), se prépare (G2) puis se divise (M). Les bactéries se divisent plus simplement, par scissiparité.",
           "body": [
             "Chez les eucaryotes, le **cycle cellulaire** comporte quatre phases : **G1** (croissance), **S** (synthèse : réplication de l'ADN), **G2** (vérifications) et **M** (mitose, qui sépare les chromosomes en deux lots identiques).",
@@ -390,16 +568,34 @@
             "Une population qui se divise sans contrainte croît de façon **exponentielle** (1, 2, 4, 8…) jusqu'à épuiser ses ressources : c'est pourquoi le graphique des effectifs est en échelle logarithmique."
           ],
           "petri": "Une cellule se divise quand sa biomasse atteint 2 × B₀ et qu'elle a assez d'ATP. Les eucaryotes passent par G1 → S → G2 → M, plus long.",
-          "wiki": "Cycle cellulaire" },
-        { "id": "mutations", "title": "Mutations et hérédité",
+          "wiki": "Cycle cellulaire"
+        },
+        {
+          "id": "mutations",
+          "title": "Mutations et hérédité",
           "short": "À chaque division, la copie de l'ADN n'est pas parfaite : de petites erreurs (mutations) modifient légèrement les descendants.",
           "body": [
             "Les polymérases font environ une erreur pour un milliard de nucléotides copiés, et les dégâts de l'ADN ajoutent d'autres changements. Ces **mutations** sont la source de toute la diversité génétique.",
             "La plupart sont neutres ou nuisibles ; quelques-unes, rares, se révèlent avantageuses dans un milieu donné."
           ],
           "petri": "À chaque division : petites variations de taille, de concentrations d'enzymes, d'épaisseur de paroi, de couleur ; rarement gain ou perte d'un organite.",
-          "wiki": "Mutation (biologie)" },
-        { "id": "selection", "title": "Sélection naturelle",
+          "wiki": "Mutation (biologie)"
+        },
+        {
+          "id": "transfert_genes",
+          "title": "Le transfert horizontal de gènes",
+          "short": "Les bactéries ne reçoivent pas leurs gènes seulement de leur mère : elles en échangent aussi avec leurs voisines, même d'autres espèces.",
+          "body": [
+            "Chez nous, les gènes passent des parents aux enfants (transfert **vertical**). Les bactéries ont en plus trois façons d'acquérir des gènes « latéralement » :",
+            "• la **transformation** : une bactérie **compétente** capture de l'ADN libéré par une cellule morte et l'intègre à son génome (découvert par Griffith en 1928, ce qui a permis de prouver que l'ADN porte l'hérédité) ; • la **conjugaison** : une bactérie porteuse d'un **plasmide** fabrique un pilus et en transmet une copie à une autre cellule qu'elle touche ; • la **transduction** : un phage emporte par erreur un morceau d'ADN d'une bactérie vers une autre.",
+            "Ces échanges expliquent la propagation rapide des **résistances aux antibiotiques** entre espèces, et font de l'arbre de la vie des bactéries plutôt un **réseau**."
+          ],
+          "petri": "Organite « Machinerie de compétence » : la cellule peut intégrer un gène (une enzyme, à demi-concentration) de l'ADN laissé par une bactérie morte sur sa case. Organite « Plasmide conjugatif » : au contact, la cellule copie un de ses gènes chez une autre bactérie. 3 gènes acquis au maximum par lignée. Les gènes acquis créent une nouvelle souche dans l'arbre des lignées.",
+          "wiki": "Transfert horizontal de gènes"
+        },
+        {
+          "id": "selection",
+          "title": "Sélection naturelle",
           "short": "Les variants qui survivent et se divisent le mieux laissent plus de descendants : la population évolue, sans but, vers ce qui marche dans son milieu.",
           "body": [
             "Darwin et Wallace ont compris que trois ingrédients suffisent à faire évoluer une population : de la **variation**, de l'**hérédité** et une **reproduction différentielle** (certains laissent plus de descendants que d'autres).",
@@ -407,21 +603,41 @@
             "La **dérive génétique** (le hasard de qui survit) compte aussi beaucoup dans les petites populations, comme vos 10 fondateurs."
           ],
           "petri": "Les points récompensent la survie, l'effectif, la diversité des ressources exploitées et le nombre de générations : survivre en évoluant est le cœur du jeu.",
-          "wiki": "Sélection naturelle" },
-        { "id": "mort_cellulaire", "title": "Dommages et mort",
+          "wiki": "Sélection naturelle"
+        },
+        {
+          "id": "lignees",
+          "title": "Lire un arbre des lignées",
+          "short": "Chaque branche est une souche apparue par mutation ou transfert de gènes. On voit quelles variations ont été sélectionnées et lesquelles ont disparu.",
+          "body": [
+            "Un **arbre phylogénétique** représente la parenté : chaque nœud est un ancêtre commun, chaque branche une lignée qui a divergé. Ici, l'arbre est construit pendant la partie, à partir des vraies divisions de vos cellules.",
+            "Les souches dont l'effectif actuel est grand sont celles que la **sélection naturelle** a favorisées dans le milieu du moment. Une souche éteinte avec un grand effectif maximal a connu son heure de gloire puis a été supplantée, par une concurrente, un phage, un changement du milieu…",
+            "Comparez les mutations des branches gagnantes : elles indiquent ce qui était utile (plus d'enzymes respiratoires, une paroi plus épaisse, une taille plus petite…)."
+          ],
+          "petri": "Une nouvelle souche apparaît quand une cellule s'éloigne assez du génome de référence de la sienne (concentrations d'enzymes, organites, taille, paroi) ou acquiert un gène. 60 souches au maximum par population : les petites branches éteintes sont élaguées.",
+          "wiki": "Arbre phylogénétique"
+        },
+        {
+          "id": "mort_cellulaire",
+          "title": "Dommages et mort",
           "short": "Famine, chaleur, pH, osmose, toxines, stress oxydatif, prédation, lyse : chaque stress abîme la cellule. Trop de dommages, et elle meurt.",
           "body": [
             "Une cellule répare en permanence ses protéines et son ADN, mais cette réparation coûte de l'ATP. Si les dégâts s'accumulent plus vite qu'elle ne répare, elle meurt.",
             "À sa mort, la cellule se désagrège (**lyse**) et relâche son contenu : protéines, ADN, ARN, phosphate… C'est un festin pour les décomposeurs."
           ],
           "petri": "La barre « Dommages » cumule les stress ; la fiche indique les causes principales. À 100 %, la cellule meurt et sa matière retourne au milieu.",
-          "wiki": "Mort cellulaire" }
+          "wiki": "Mort cellulaire"
+        }
       ]
     },
     {
-      "id": "ecologie", "icon": "🌿", "title": "Écologie microbienne",
+      "id": "ecologie",
+      "icon": "🌿",
+      "title": "Écologie microbienne",
       "sections": [
-        { "id": "interactions", "title": "Les interactions entre espèces",
+        {
+          "id": "interactions",
+          "title": "Les interactions entre espèces",
           "short": "Compétition, prédation, parasitisme, symbiose : les espèces se nuisent, s'exploitent ou s'entraident.",
           "body": [
             "**Compétition** : deux espèces consomment la même ressource. Selon le principe d'exclusion compétitive, la plus efficace finit par éliminer l'autre, sauf si elles se partagent le milieu (niches différentes).",
@@ -430,50 +646,105 @@
             "**Commensalisme** : l'un profite des déchets de l'autre sans le gêner, comme un consommateur de lactate près d'un fermenteur."
           ],
           "petri": "Toutes ces interactions émergent de la simulation : partage des champs de nutriments, phagocytose, fixation des parasites, échanges entre partenaires porteurs d'adhésines.",
-          "wiki": "Interaction biologique" },
-        { "id": "decomposeurs", "title": "Décomposeurs et recyclage",
+          "wiki": "Interaction biologique"
+        },
+        {
+          "id": "decomposeurs",
+          "title": "Décomposeurs et recyclage",
           "short": "Bactéries et champignons décomposent les cadavres et la litière : ils remettent en circulation le carbone, l'azote et le phosphore.",
           "body": [
             "Sans **décomposeurs**, la matière morte s'accumulerait et les nutriments disparaîtraient du milieu. En sécrétant [[enzymes_secretees|protéases, cellulases et nucléases]], ils transforment les débris en petites molécules réutilisables par tous.",
             "Le **réseau trophique** microbien relie producteurs (photosynthétiques), consommateurs (prédateurs), décomposeurs et recycleurs de déchets."
           ],
           "petri": "La litière de cellulose, les protéines et acides nucléiques des cadavres sont des ressources à part entière, visibles dans les calques.",
-          "wiki": "Décomposeur" }
+          "wiki": "Décomposeur"
+        },
+        {
+          "id": "quorum",
+          "title": "Le quorum sensing : compter ses voisines",
+          "short": "Les bactéries sécrètent une petite molécule signal. Quand elles sont nombreuses, le signal devient fort et déclenche des comportements collectifs.",
+          "body": [
+            "Chaque bactérie libère en permanence un peu d'**autoinducteur** (par exemple une AHL, fabriquée par l'enzyme LuxI). Une cellule seule ne perçoit presque rien, car le signal diffuse et se dégrade. Quand la population devient dense, le signal dépasse un seuil : des gènes s'allument tous en même temps.",
+            "Ce mécanisme a été découvert chez *Vibrio fischeri*, une bactérie qui ne produit de lumière que lorsqu'elle est très concentrée dans l'organe lumineux d'un calmar. Les pathogènes l'utilisent pour n'attaquer (toxines, enzymes) que lorsqu'ils sont assez nombreux pour submerger les défenses.",
+            "D'autres espèces peuvent « écouter » le signal sans le produire, ou fabriquer des enzymes qui le détruisent (*quorum quenching*)."
+          ],
+          "petri": "La synthase d'autoinducteur produit un signal qui diffuse. Toute enzyme cochée « quorum » ne s'active qu'en proportion du signal local (réponse sigmoïde de Hill). Idéal pour les toxines et les enzymes sécrétées coûteuses.",
+          "wiki": "Quorum sensing"
+        },
+        {
+          "id": "biofilm",
+          "title": "Les biofilms",
+          "short": "Des bactéries collées dans une matrice qu'elles fabriquent ensemble : elles bougent peu, mais résistent bien mieux aux prédateurs, toxines, antibiotiques et virus.",
+          "body": [
+            "Dans la nature, la plupart des bactéries ne nagent pas seules : elles vivent en **biofilms**, des communautés collées sur une surface et enrobées d'une **matrice** de sucres, de protéines et d'ADN. La plaque dentaire, la couche glissante sur les cailloux d'une rivière ou les dépôts dans les tuyaux sont des biofilms.",
+            "La matrice freine la diffusion des molécules dangereuses et cache les cellules : un biofilm peut tolérer jusqu'à 1 000 fois plus d'antibiotique que les mêmes bactéries libres. C'est un gros problème pour les infections sur les prothèses et les cathéters.",
+            "Le prix à payer : fabriquer la matrice coûte de l'énergie, et les cellules au centre reçoivent moins de nourriture."
+          ],
+          "petri": "Les cellules sœurs avec une matrice de biofilm se collent quand elles se touchent. Chaque voisine collée ajoute 12 % de protection (jusqu'à 60 %) contre la prédation, les toxines, la lyse, les antibiotiques et les phages. La mobilité tombe à 15 %.",
+          "wiki": "Biofilm"
+        }
       ]
     },
     {
-      "id": "milieu", "icon": "🌍", "title": "Le milieu",
+      "id": "milieu",
+      "icon": "🌍",
+      "title": "Le milieu",
       "sections": [
-        { "id": "milieu", "title": "Gradients du milieu",
+        {
+          "id": "milieu",
+          "title": "Gradients du milieu",
           "short": "Lumière, température, pH, salinité et nutriments varient d'un endroit à l'autre : chaque espèce trouve (ou non) la zone qui lui convient.",
           "body": [
             "Dans un étang ou un tapis microbien, les conditions changent sur quelques millimètres : la **lumière** diminue avec la profondeur, l'**O₂** est produit en surface par les photosynthétiques et consommé plus bas, le **pH** et les nutriments varient selon l'activité des voisins.",
             "Ces **gradients** créent des **niches** : des espèces aux besoins différents peuvent coexister en occupant chacune sa zone."
           ],
           "petri": "Le monde est une grille de cases (10 µm) ; chaque case a sa température, sa salinité, sa lumière et ses concentrations. Les calques permettent de les afficher.",
-          "wiki": "Niche écologique" },
-        { "id": "ph", "title": "Le pH",
-          "short": "Mesure de l'acidité : 7 neutre, moins acide, plus basique. Les fermentations acidifient le milieu ; la plupart des cellules préfèrent un pH proche de 7.",
+          "wiki": "Niche écologique"
+        },
+        {
+          "id": "ph",
+          "title": "Le pH",
+          "short": "Mesure de l'acidité : 7 neutre, moins acide, plus basique. Les fermentations acidifient le milieu, l'ammoniac (par exemple produit par l'uréase) le rend basique.",
           "body": [
             "Le **pH** mesure la concentration en ions H⁺ sur une échelle logarithmique : un pH de 5 est 100 fois plus acide qu'un pH de 7.",
-            "Les cellules rejettent souvent des acides (lactate, acétate) qui font baisser le pH autour d'elles. Ce changement peut gêner leurs concurrents… ou elles-mêmes."
+            "Les cellules rejettent souvent des acides (lactate, acétate) qui font baisser le pH autour d'elles. Ce changement peut gêner leurs concurrents… ou elles-mêmes.",
+            "Le milieu peut aussi devenir **basique** : l'**uréase** coupe l'urée en ammoniac et CO₂, et l'ammoniac capte des ions H⁺. *Helicobacter pylori* survit ainsi dans l'estomac très acide en s'entourant d'un nuage d'ammoniac ; dans les sols, l'uréase des bactéries fait monter le pH autour des engrais azotés."
           ],
-          "petri": "Le pH de chaque case baisse avec les acides présents (lactate, acétate…) par rapport à sa valeur de base, fixée par la région du monde.",
-          "wiki": "Potentiel hydrogène" },
-        { "id": "lumiere", "title": "Lumière et cycle jour/nuit",
+          "petri": "Le pH de chaque case s'écarte de sa valeur de base selon le bilan acides (lactate, acétate, CO₂) − bases (ammonium). Une population avec uréase sur un gisement d'urée fait monter le pH local d'environ 0,5.",
+          "wiki": "Potentiel hydrogène"
+        },
+        {
+          "id": "lumiere",
+          "title": "Lumière et cycle jour/nuit",
           "short": "La lumière vient du haut et s'atténue en profondeur ; elle disparaît la nuit. Les photosynthétiques doivent stocker pour passer la nuit.",
           "body": [
             "L'eau absorbe la lumière : à quelques dizaines de mètres de profondeur, il n'en reste presque plus. La photosynthèse est donc concentrée près de la surface.",
             "La nuit, les photosynthétiques vivent sur leurs réserves et respirent comme les autres."
           ],
           "petri": "Lumière maximale en haut du monde, décroissante vers le bas ; cycle jour/nuit (voir l'indicateur ☀️/🌙).",
-          "wiki": "Zone photique" }
+          "wiki": "Zone photique"
+        },
+        {
+          "id": "evenements",
+          "title": "Un milieu qui change",
+          "short": "Canicules, froids, averses, apports de matière, antibiotiques, virus : le milieu change et les populations doivent s'adapter… ou disparaître.",
+          "body": [
+            "Aucun milieu naturel n'est stable. Une flaque se réchauffe au soleil, une averse dilue le sel et lessive les nutriments des berges, une feuille morte apporte un festin aux décomposeurs, une moisissure voisine libère des antibiotiques, des virus arrivent.",
+            "Ces **perturbations** sont un moteur de l'évolution : une population très spécialisée prospère tant que les conditions sont stables, mais une population plus **tolérante** ou plus **diverse** génétiquement a plus de chances de traverser une crise. Après la perturbation, la **succession** écologique recompose la communauté."
+          ],
+          "petri": "Toutes les 5 à 10 minutes, un événement touche une zone (cercle en pointillés sur la carte, avec son temps restant) et s'affiche dans le journal. Les températures et salinités reviennent ensuite progressivement à la normale.",
+          "wiki": "Perturbation (écologie)"
+        }
       ]
     },
     {
-      "id": "modele", "icon": "📐", "title": "Petri et la réalité",
+      "id": "modele",
+      "icon": "📐",
+      "title": "Petri et la réalité",
       "sections": [
-        { "id": "modele", "title": "Ce que Petri simplifie",
+        {
+          "id": "modele",
+          "title": "Ce que Petri simplifie",
           "short": "Petri est un modèle : unités abstraites, voies regroupées, monde en 2D. Les ordres de grandeur et les mécanismes sont réalistes, pas les valeurs exactes.",
           "body": [
             "Un **modèle** simplifie la réalité pour la rendre compréhensible et calculable. Petri garde les grands mécanismes (cinétique enzymatique, bilans de matière et d'énergie, surface/volume, sélection), mais simplifie beaucoup :",
@@ -481,7 +752,8 @@
             "Utilisez Petri pour comprendre **pourquoi** les cellules sont faites comme elles sont, pas pour prédire une expérience de laboratoire."
           ],
           "petri": "Le moteur est déterministe (même graine = même histoire) et testé automatiquement : conservation de la matière, énergie, viabilité des conceptions de référence.",
-          "wiki": "Modèle scientifique" }
+          "wiki": "Modèle scientifique"
+        }
       ]
     }
   ]

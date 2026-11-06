@@ -5,6 +5,7 @@ import { h } from './dom.js';
 /** Remplace les enfants d'un élément (accepte des tableaux imbriqués). */
 const fill = (el, ...kids) => { el.replaceChildren(...kids.flat(Infinity).filter((k) => k !== null && k !== undefined && k !== false)); return el; };
 import { richText, wikiUrl } from './help.js';
+import { WIDGETS } from './livretWidgets.js';
 
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const plain = (s) => s.replace(/\*\*|\*|\[\[[a-z0-9_]+\||\]\]/g, '');
@@ -86,6 +87,7 @@ export class Livret {
       h('h3', {}, s.title),
       h('p', { class: 'livret-short' }, richText(s.short, (id) => this.open(id))),
       s.body.map((p) => h('p', {}, richText(p, (id) => this.open(id)))),
+      WIDGETS[s.id] ? WIDGETS[s.id]() : null,
       s.petri ? h('div', { class: 'livret-petri' }, h('b', {}, '🎮 Dans Petri : '), s.petri) : null,
       s.wiki ? h('div', { class: 'small' }, h('a', { href: wikiUrl(s.wiki), target: '_blank', rel: 'noopener noreferrer' }, `🔎 Pour aller plus loin : « ${s.wiki} » sur Wikipédia`)) : null);
   }

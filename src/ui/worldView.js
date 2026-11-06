@@ -23,7 +23,13 @@ export const LAYERS = {
   ethanol: { name: 'Éthanol', field: 'ethanol', max: 3, color: [184, 242, 230] },
   toxin: { name: 'Toxines', field: 'toxin', max: 1.5, color: [230, 30, 30] },
   secreted: { name: 'Enzymes sécrétées (activité)', custom: 'secreted', color: [255, 80, 220] },
+  uree: { name: 'Urée', field: 'uree', max: 8, color: [224, 170, 255] },
+  signal: { name: 'Signal de quorum', field: 'signal', max: 0.3, color: [128, 255, 219] },
+  phage: { name: 'Bactériophages', field: 'phage', max: 0.3, color: [255, 0, 110] },
+  antibiotique: { name: 'Antibiotique', field: 'antibiotique', max: 2, color: [255, 190, 11] },
 };
+
+export const EVENT_ICONS = { canicule: ['🔥', '#ff6b35'], froid: ['❄️', '#8ecae6'], pluie: ['🌧️', '#90e0ef'], apport: ['🍂', '#dda15e'], antibiotique: ['💊', '#ffbe0b'], phages: ['🦠', '#ff006e'] };
 
 /** Valeur brute du calque dans la case i, et normalisation 0..1 pour la couleur. */
 export function layerValue(env, layer, i, autoMax = 1) {
@@ -225,6 +231,14 @@ export class WorldView {
         }
       }
     }
+    // matrice des biofilms (halo commun sous les cellules collées)
+    ctx.fillStyle = 'rgba(190,230,150,0.16)';
+    for (const c of w.cells) {
+      if (!(c.bfN > 0)) continue;
+      const r = c.ph.radius;
+      if (c.x + r * 3 < vx0 || c.x - r * 3 > vx1 || c.y + r * 3 < vy0 || c.y - r * 3 > vy1) continue;
+      ctx.beginPath(); ctx.arc(c.x, c.y, r * 1.9, 0, Math.PI * 2); ctx.fill();
+    }
     for (const c of w.cells) {
       const r = c.ph.radius;
       if (c.x + r * 3 < vx0 || c.x - r * 3 > vx1 || c.y + r * 3 < vy0 || c.y - r * 3 > vy1) continue;
@@ -254,9 +268,22 @@ export class WorldView {
         if (c.phase !== 'G1' && rpx > 5) { ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.setLineDash([2 / z, 2 / z]); ctx.lineWidth = 0.8 / z; ctx.beginPath(); ctx.arc(0, 0, r * grow * 1.15, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
         ctx.restore();
       }
+      if (c.infected) { // cellule infectée : virions qui s'accumulent
+        ctx.fillStyle = `rgba(255,0,110,${0.55 + 0.35 * Math.sin(time * 6 + c.id)})`;
+        for (let k = 0; k < 3; k++) { const a = k * 2.1 + c.id; ctx.beginPath(); ctx.arc(c.x + Math.cos(a) * r * 0.45, c.y + Math.sin(a) * r * 0.45, Math.max(r * 0.16, 0.6 / z), 0, Math.PI * 2); ctx.fill(); }
+      }
       if (this.hoverPop && c.popId === this.hoverPop) {
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 1 / z; ctx.beginPath(); ctx.arc(c.x, c.y, Math.max(r * 1.5, 3 / z), 0, Math.PI * 2); ctx.stroke();
       }
+    }
+    // événements du milieu en cours
+    const evs = w.remote ? (w.envEvents || []) : (w.scheduler?.summary() || []);
+    for (const e of evs) {
+      const [icon, color] = EVENT_ICONS[e.type] || ['❗', '#fff'];
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5 / z; ctx.setLineDash([6 / z, 5 / z]);
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.font = `${16 / z}px system-ui`; ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
+      ctx.fillText(`${icon} ${e.left} s`, e.x, e.y - e.r - 6 / z);
     }
     if (sel) {
       const s = w.cellById.get(sel);
