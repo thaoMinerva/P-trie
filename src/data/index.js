@@ -1,9 +1,10 @@
-// Chargeur des données biologiques (JSON) – fonctionne dans le navigateur (fetch) et sous Node (fs).
+// Chargeur des données biologiques (JSON) – navigateur et worker (fetch), Node (fs).
 const FILES = ['metabolites', 'enzymes', 'organelles', 'envelope', 'params', 'bricks', 'archetypes', 'organelleBricks', 'walls', 'membraneProteins', 'livret', 'challenges'];
 
 async function loadJSON(name) {
   const url = new URL(`./${name}.json`, import.meta.url);
-  if (typeof window === 'undefined' || url.protocol === 'file:') {
+  // Node (tests, serveur) : lecture directe ; navigateur et worker : fetch
+  if (url.protocol === 'file:') {
     const { readFile } = await import('node:fs/promises');
     return JSON.parse(await readFile(url, 'utf8'));
   }

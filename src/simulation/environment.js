@@ -71,7 +71,8 @@ export class Environment {
     // Gisements de ressources (cibles de régénération)
     for (const [id, cfg] of Object.entries(E.regen)) {
       const t = new Float32Array(this.n).fill(cfg.background);
-      for (let p = 0; p < cfg.patches; p++) {
+      const nPatches = Math.round(cfg.patches * Math.max(1, this.n / 4800)); // plus de gisements dans un grand monde
+      for (let p = 0; p < nPatches; p++) {
         const px = rng.range(0.05, 0.95) * gw;
         const py = cfg.bias === 'bottom' ? rng.range(0.55, 0.97) * gh : rng.range(0.05, 0.95) * gh;
         const r = cfg.radius * rng.range(0.7, 1.3);
@@ -109,6 +110,9 @@ export class Environment {
 
   diffuse(f, D) {
     const { gw, gh } = this, s = this.scratch;
+    let any = false;
+    for (let i = 0; i < f.length; i++) if (f[i] !== 0) { any = true; break; }
+    if (!any) return; // champ vide : rien à diffuser
     s.set(f);
     const k = D * 0.25;
     for (let y = 0; y < gh; y++) {

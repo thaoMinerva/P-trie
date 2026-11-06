@@ -6,6 +6,11 @@
     "dayLength": 600, "nightLight": 0.25, "lightDepth": 260,
     "tempLeft": 14, "tempRight": 36
   },
+  "worldSizes": {
+    "petit": { "name": "Petit (800 × 600 µm, 2 500 cellules)", "width": 800, "height": 600, "maxCells": 2500, "ghostFactor": 1 },
+    "moyen": { "name": "Moyen (1 200 × 900 µm, 5 000 cellules)", "width": 1200, "height": 900, "maxCells": 5000, "ghostFactor": 1.6 },
+    "grand": { "name": "Grand (1 600 × 1 200 µm, 8 000 cellules)", "width": 1600, "height": 1200, "maxCells": 8000, "ghostFactor": 2.4 }
+  },
   "cell": {
     "biomassDensity": 1.0,
     "nadPerVolume": 0.5,

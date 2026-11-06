@@ -7,9 +7,11 @@ import { PARAMS } from '../data/index.js';
 import { isMine, identity } from '../game/identity.js';
 import { help } from './help.js';
 import { renderLineage } from './lineageView.js';
+import { BOARDS } from '../game/leaderboard.js';
 
 let treePopId = null; // population dont l'arbre des lignées est affiché
 
+const append = (root, ...kids) => root.append(...kids.filter((k) => k !== null && k !== undefined && k !== false));
 const resName = (r) => (r === 'light' ? 'lumière' : RES_LABELS[r] || r);
 
 export function popSeries(world, filter = () => true, highlight = null) {
@@ -30,14 +32,14 @@ export function renderMiniPops(root, world, { onHover, onFocus }) {
   }
 }
 
-export function renderPopulations(root, world, progression, ghostSource, actions) {
+export function renderPopulations(root, world, progression, ghostSource, actions, board = null) {
   clear(root);
   const living = world.livingPopulations();
   const mine = living.filter((p) => isMine(p));
   const others = living.filter((p) => !isMine(p));
   const chart = h('canvas', { class: 'chart big' });
   const S = PARAMS.score;
-  root.append(
+  append(root, 
     h('div', { class: 'grid2' },
       h('section', { class: 'card' },
         h('h3', {}, 'Progression ', help('selection')),
@@ -55,13 +57,27 @@ export function renderPopulations(root, world, progression, ghostSource, actions
     (() => {
       const tp = treePopId && world.populations.get(treePopId);
       if (!tp) return null;
-      return renderLineage(tp, world, () => { treePopId = null; renderPopulations(root, world, progression, ghostSource, actions); });
+      return renderLineage(tp, world, () => { treePopId = null; renderPopulations(root, world, progression, ghostSource, actions, board); });
     })(),
     h('section', { class: 'card' }, h('h3', {}, 'Effectifs dans le temps ', help('cycle_cellulaire')), chart),
-    h('section', { class: 'card' }, h('h3', {}, `Vos populations (${mine.length})`), popTable(mine, world, { ...actions, tree: (p) => { treePopId = p.id; renderPopulations(root, world, progression, ghostSource, actions); root.querySelector('.lineage')?.scrollIntoView({ behavior: 'smooth' }); } }, true)),
-    h('section', { class: 'card' }, h('h3', {}, `Populations des autres (${others.length})`), popTable(others, world, { ...actions, tree: (p) => { treePopId = p.id; renderPopulations(root, world, progression, ghostSource, actions); root.querySelector('.lineage')?.scrollIntoView({ behavior: 'smooth' }); } }, false)),
+    h('section', { class: 'card' }, h('h3', {}, `Vos populations (${mine.length})`), popTable(mine, world, { ...actions, tree: (p) => { treePopId = p.id; renderPopulations(root, world, progression, ghostSource, actions, board); root.querySelector('.lineage')?.scrollIntoView({ behavior: 'smooth' }); } }, true)),
+    board ? renderBoard(board) : null,
+    h('section', { class: 'card' }, h('h3', {}, `Populations des autres (${others.length})`), popTable(others, world, { ...actions, tree: (p) => { treePopId = p.id; renderPopulations(root, world, progression, ghostSource, actions, board); root.querySelector('.lineage')?.scrollIntoView({ behavior: 'smooth' }); } }, false)),
   );
   requestAnimationFrame(() => lineChart(chart, popSeries(world, (p) => !p.extinct || world.time - p.extinctAt < 300), { log: true, xFmt: (v) => `${Math.round(v)} s`, yLabel: 'individus (échelle log)' }));
+}
+
+function renderBoard(board) {
+  const me = identity.id;
+  const fmtV = (b, v) => (b.key === 'life' ? fmtTime(v) : `${v} ${b.unit}`);
+  return h('section', { class: 'card' },
+    h('h3', {}, '🏆 Classements ', help('selection')),
+    board.players ? h('div', { class: 'board' }, h('h4', {}, 'Joueurs (points gagnés)'),
+      h('ol', {}, board.players.map((p) => h('li', {}, h('span', { class: `dot ${p.online ? 'on' : 'off'}` }), ' ', h('b', {}, p.name), h('span', { class: 'muted small' }, ` · ${p.totalEarned} pts · ${p.challenges} défi(s)`))))) : null,
+    h('div', { class: 'board-grid' }, BOARDS.map((b) => h('div', { class: 'board' }, h('h4', {}, b.title),
+      board.boards?.[b.key]?.length ? h('ol', {}, board.boards[b.key].map((e) => h('li', { class: e.ownerId === me ? 'mine' : '' },
+        h('span', { class: 'swatch', style: { background: e.color } }), ' ', h('b', {}, e.name), h('span', { class: 'muted small' }, ` (${e.ownerId === me ? 'vous' : e.owner})${e.alive ? ' · vivante' : ''}`), h('span', { class: 'board-v' }, fmtV(b, e[b.key])))))
+        : h('div', { class: 'muted small' }, 'Pas encore de record.')))));
 }
 
 function stat(label, value) { return h('div', { class: 'stat' }, h('div', { class: 'stat-v' }, value), h('div', { class: 'stat-l' }, label)); }

@@ -277,3 +277,7 @@ a.btn { color: var(--text); }
 .livret-widget { background: #0c1a21; border: 1px solid rgba(76,201,240,.25); border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
 .widget-title { font-weight: 600; margin-bottom: 4px; } .widget-out { margin-top: 6px; color: #cfe8f0; }
 .livret-widget .row.slider { display: grid; grid-template-columns: 150px 1fr 90px; gap: 8px; align-items: center; }
+/* --- Classements --- */
+.board-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.board ol { margin: 4px 0; padding-left: 22px; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
+.board li.mine b { color: var(--accent); } .board-v { float: right; font-variant-numeric: tabular-nums; }

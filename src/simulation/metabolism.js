@@ -55,6 +55,7 @@ export function metabolize(cell, env, dt, stats) {
   const ex = ph.exchange;
   for (let k = 0; k < TRANSPORTED.length; k++) {
     const m = TRANSPORTED[k], f = fields[m.i];
+    if (f[g] < 1e-12 && p[m.i] < 1e-12) continue; // molécule absente des deux côtés : rien à échanger
     const cEnv = f[g] / gv, cInt = p[m.i] / V;
     let flux;
     if (m.transport === 'actif') {

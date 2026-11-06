@@ -1,4 +1,6 @@
-// Serveur multijoueur Petri (aucune dépendance) : node server/server.js [port]
+// Serveur multijoueur Petri (aucune dépendance) :
+//   node server/server.js [port] [--mot-de-passe=secret] [--taille=petit|moyen|grand]
+// (ou variables d'environnement PORT, PETRI_PASSWORD, PETRI_TAILLE, PETRI_SPEED)
 //
 // - Fait tourner UN monde partagé (même moteur que le client) en temps réel, avec les populations fantômes.
 // - Sert les fichiers du jeu (le navigateur détecte /api/info et passe en mode multijoueur).
@@ -6,9 +8,9 @@
 // - Autorité : le serveur valide les conceptions (sanitizeDesign), gère les points et sauvegarde le monde.
 import http from 'node:http';
 import { readFile, writeFile, mkdir, stat, rename } from 'node:fs/promises';
-import { extname, join, normalize, resolve, sep } from 'node:path';
+import { dirname, extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import { PARAMS, MET } from '../src/data/index.js';
 import { World } from '../src/simulation/world.js';
 import { GhostWorldSource } from '../src/world/ghostSource.js';
@@ -18,10 +20,24 @@ import { analyzeDesign } from '../src/simulation/analysis.js';
 import { launchCost } from '../src/game/progression.js';
 import { MI, DMG_KEYS } from '../src/simulation/metabolism.js';
 import { challengeStatus } from '../src/game/challenges.js';
+import { popPayload, statePayload as statePayloadOf, worldInfo, cellPayload, layerArray } from '../src/world/protocol.js';
+import { recordOf, topLists } from '../src/game/leaderboard.js';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const port = Number(process.argv[2] || process.env.PORT || 5173);
-const SAVE = join(root, 'server', 'data', 'monde.json');
+const args = process.argv.slice(2);
+const flag = (name) => { const a = args.find((x) => x.startsWith(`--${name}=`)); return a ? a.slice(name.length + 3) : undefined; };
+const port = Number(args.find((x) => /^\d+$/.test(x)) || process.env.PORT || 5173);
+const PASSWORD = flag('mot-de-passe') ?? process.env.PETRI_PASSWORD ?? '';
+const SIZE = PARAMS.worldSizes[flag('taille') ?? process.env.PETRI_TAILLE] ? (flag('taille') ?? process.env.PETRI_TAILLE) : 'petit';
+const hash = (x) => createHash('sha256').update(String(x)).digest();
+const PASS_HASH = PASSWORD ? hash(PASSWORD) : null;
+/** Le mot de passe est-il bon ? (comparaison à temps constant) */
+function authorized(req, url) {
+  if (!PASS_HASH) return true;
+  const k = req.headers['x-petri-key'] || url.searchParams.get('key') || '';
+  return timingSafeEqual(hash(k), PASS_HASH);
+}
+const SAVE = process.env.PETRI_SAVE ? resolve(process.env.PETRI_SAVE) : join(root, 'server', 'data', 'monde.json');
 const G = PARAMS.game, W = PARAMS.world;
 const SPEED = Number(process.env.PETRI_SPEED || 1); // vitesse du monde partagé (×1 par défaut)
 
@@ -29,6 +45,7 @@ const SPEED = Number(process.env.PETRI_SPEED || 1); // vitesse du monde partagé
 let world, ghosts;
 const players = new Map(); // id → { id, name, points, totalEarned, lastSeen }
 const clients = new Set(); // { res, playerId, sentAt }
+let records = []; // records des populations éteintes des joueurs (classements)
 let chat = []; // derniers messages { id, playerId, name, text, at, system? }
 let chatSeq = 0;
 
@@ -39,7 +56,10 @@ function wire() {
     pl.points += gain; pl.totalEarned += gain;
     sendTo(pl.id, 'points', { points: pl.points, totalEarned: pl.totalEarned, gain, popId: pop.id });
   });
-  world.on('extinction', (pop) => broadcast('extinction', pop.summary()));
+  world.on('extinction', (pop) => {
+    broadcast('extinction', pop.summary());
+    if (players.has(pop.ownerId)) { records.push(recordOf(pop, world.time)); if (records.length > 500) records = records.slice(-500); }
+  });
   world.on('event', (ev) => broadcast('log', ev));
 }
 
@@ -50,21 +70,23 @@ async function load() {
     ghosts = new GhostWorldSource({ seed: world.seed });
     ghosts.deserialize(data.ghosts);
     for (const p of data.players || []) players.set(p.id, p);
+    records = data.records || [];
     chat = (data.chat || []).slice(-100); chatSeq = chat.reduce((m, c) => Math.max(m, c.id || 0), 0);
     console.log(`Monde restauré (${world.cells.length} cellules, t = ${Math.round(world.time)} s, ${players.size} joueurs connus).`);
   } catch {
-    world = new World({ seed: (Date.now() % 1e9) | 0 });
-    ghosts = new GhostWorldSource({ seed: world.seed ^ 0x5bd1e995 });
-    console.log('Nouveau monde créé.');
+    const S = PARAMS.worldSizes[SIZE];
+    world = new World({ seed: (Date.now() % 1e9) | 0, env: { gw: Math.round(S.width / W.cellSize), gh: Math.round(S.height / W.cellSize) }, maxCells: S.maxCells });
+    ghosts = new GhostWorldSource({ seed: world.seed ^ 0x5bd1e995, target: Math.round(G.ghostTarget * S.ghostFactor) });
+    console.log(`Nouveau monde créé : ${S.name}.`);
   }
   wire();
   world.attachSource(ghosts);
 }
 
 async function save() {
-  await mkdir(join(root, 'server', 'data'), { recursive: true });
+  await mkdir(dirname(SAVE), { recursive: true });
   const tmp = SAVE + '.tmp';
-  await writeFile(tmp, JSON.stringify({ world: serializeWorld(world), ghosts: ghosts.serialize(), players: [...players.values()].map(({ chatTimes, ...p }) => p), chat, savedAt: Date.now() }));
+  await writeFile(tmp, JSON.stringify({ world: serializeWorld(world), ghosts: ghosts.serialize(), players: [...players.values()].map(({ chatTimes, ...p }) => p), chat, records, savedAt: Date.now() }));
   await rename(tmp, SAVE);
 }
 
@@ -99,32 +121,7 @@ function pushChat(m) {
   return m;
 }
 
-function popPayload(p, withHistory) {
-  return {
-    id: p.id, ownerId: p.ownerId, ownerName: p.ownerName, name: p.name, color: p.color, profile: p.profile, design: p.design,
-    launchedAt: p.launchedAt, count: p.count, maxCount: p.maxCount, births: p.births, deaths: p.deaths, maxGeneration: p.maxGeneration,
-    deathCauses: p.deathCauses, score: p.score, pointsEarned: p.pointsEarned, kills: p.kills, symbiosis: p.symbiosis, parasitism: p.parasitism,
-    resourcesUsed: p.resourcesUsed, extinct: p.extinct, extinctAt: p.extinctAt, extinctionSummary: p.extinctionSummary,
-    history: withHistory ? p.history : undefined,
-    hgt: p.hgt, immunized: p.immunized, infections: p.infections, phageDeaths: p.phageDeaths, strains: p.strains.map(({ ref, ...st }) => st),
-  };
-}
-
-function statePayload() {
-  const popIndex = new Map();
-  const pops = [];
-  for (const p of world.populations.values()) if (!p.extinct || world.time - p.extinctAt < 300) { popIndex.set(p.id, pops.length); pops.push(p.id); }
-  const cells = new Array(world.cells.length * 11);
-  let k = 0;
-  for (const c of world.cells) {
-    cells[k++] = c.id; cells[k++] = popIndex.get(c.popId) ?? -1;
-    cells[k++] = Math.round(c.x * 10) / 10; cells[k++] = Math.round(c.y * 10) / 10;
-    cells[k++] = Math.round(c.angle * 100) / 100; cells[k++] = Math.round(c.ph.radius * 100) / 100;
-    cells[k++] = Math.round((c.pools[MI.biomass] / c.ph.B0) * 100) / 100; cells[k++] = Math.round(c.genome.hue || 0);
-    cells[k++] = (c.phase === 'G1' ? 0 : 1) | (c.bfN > 0 ? 2 : 0) | (c.infected ? 4 : 0); cells[k++] = c.host || 0; cells[k++] = c.partners[0] || 0;
-  }
-  return { t: world.time, light: world.env.lightLevel, pops, cells, evs: world.scheduler?.summary() || [] };
-}
+const statePayload = () => statePayloadOf(world);
 
 function usersPayload() {
   const real = [...players.values()].map((p) => ({ id: p.id, name: p.name, profile: 'Joueur', online: clientsOf(p.id).length > 0, human: true }));
@@ -177,7 +174,16 @@ function playerFor(id, name) {
 }
 
 const api = {
-  'GET /api/info': (req, res) => json(res, 200, { multiplayer: true, players: usersPayload().filter((u) => u.human && u.online).length, time: world.time, speed: SPEED }),
+  'GET /api/info': (req, res) => json(res, 200, { multiplayer: true, needPassword: !!PASS_HASH, players: usersPayload().filter((u) => u.human && u.online).length, time: world.time, speed: SPEED }),
+
+  'GET /api/auth': (req, res, url) => json(res, authorized(req, url) ? 200 : 401, { ok: authorized(req, url) }),
+
+  'GET /api/leaderboard': (req, res) => {
+    const live = world.livingPopulations().filter((p) => players.has(p.ownerId)).map((p) => recordOf(p, world.time));
+    const pl = [...players.values()].map((p) => ({ name: p.name, totalEarned: Math.round(p.totalEarned), challenges: Object.keys(p.challenges || {}).length, online: clientsOf(p.id).length > 0 }))
+      .sort((a, b) => b.totalEarned - a.totalEarned).slice(0, 20);
+    json(res, 200, { players: pl, boards: topLists([...records, ...live]) });
+  },
 
   'GET /api/stream': (req, res, url) => {
     const pl = playerFor(url.searchParams.get('player'), url.searchParams.get('name'));
@@ -185,8 +191,7 @@ const api = {
     const env = world.env;
     sse(res, 'init', {
       playerId: pl.id, name: pl.name, points: pl.points, totalEarned: pl.totalEarned,
-      world: { width: world.width, height: world.height, gw: env.gw, gh: env.gh, cellSize: env.cellSize, gridVolume: env.gridVolume,
-        temperature: b64(env.temperature), salinity: b64(env.salinity), lightDepth: b64(env.lightDepth) },
+      world: worldInfo(world, b64),
       events: world.events.slice(-40), speed: SPEED, chat,
     });
     sse(res, 'pops', { pops: [...world.populations.values()].map((p) => popPayload(p, true)), users: usersPayload() });
@@ -246,26 +251,14 @@ const api = {
   },
 
   'GET /api/cell': (req, res, url) => {
-    const c = world.cellById.get(Number(url.searchParams.get('id')));
-    if (!c || !c.alive) return json(res, 404, { ok: false });
-    const env = world.env, g = env.idx(c.x, c.y);
-    json(res, 200, {
-      ok: true, id: c.id, popId: c.popId, genome: c.genome, pools: Array.from(c.pools), dmg: Array.from(c.dmg), dmgKeys: DMG_KEYS,
-      damage: c.damage, age: c.age, generation: c.generation, phase: c.phase, x: c.x, y: c.y, angle: c.angle,
-      host: c.host, parasites: c.parasites, partners: c.partners,
-      strainId: c.strainId, shield: c.shield, bfN: c.bfN, infected: c.infected, immune: c.immune, hgt: c.hgt,
-      local: { T: env.temperature[g], pH: env.pH[g], light: env.lightAt(g), salinity: env.salinity[g],
-        o2: env.fields[MET.o2.index][g], glucose: env.fields[MET.glucose.index][g], nh4: env.fields[MET.nh4.index][g], protein: env.fields[MET.protein.index][g] },
-    });
+    const d = cellPayload(world, Number(url.searchParams.get('id')));
+    if (!d) return json(res, 404, { ok: false });
+    json(res, 200, d);
   },
 
   'GET /api/layer': (req, res, url) => {
     const name = url.searchParams.get('name') || '';
-    const env = world.env;
-    let arr = null;
-    if (name === 'pH') arr = env.pH;
-    else if (name === 'secreted') arr = env.secreted;
-    else if (MET[name]?.env) arr = env.fields[MET[name].index];
+    const arr = layerArray(world, name);
     if (!arr) return json(res, 404, { ok: false });
     json(res, 200, { ok: true, name, data: b64(arr) });
   },
@@ -298,6 +291,8 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   const handler = api[`${req.method} ${url.pathname}`];
   try {
+    // tout l'API est protégé par le mot de passe, sauf la détection du serveur et la vérification du mot de passe
+    if (handler && url.pathname !== '/api/info' && url.pathname !== '/api/auth' && !authorized(req, url)) return json(res, 401, { ok: false, error: 'Mot de passe incorrect.' });
     if (handler) await handler(req, res, url);
     else if (url.pathname.startsWith('/api/')) json(res, 404, { ok: false, error: 'API inconnue' });
     else await serveStatic(req, res, url);
@@ -306,5 +301,6 @@ http.createServer(async (req, res) => {
   }
 }).listen(port, () => {
   console.log(`Petri multijoueur : http://localhost:${port}/`);
+  console.log(PASS_HASH ? '🔒 Protégé par mot de passe : les joueurs devront le saisir.' : '🔓 Sans mot de passe : quiconque connaît l\'adresse peut entrer (option --mot-de-passe=… pour protéger).');
   console.log('Les autres joueurs de votre réseau peuvent se connecter avec l\'adresse IP de cette machine (ex. http://192.168.1.20:' + port + '/).');
 });

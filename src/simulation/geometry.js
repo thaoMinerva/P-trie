@@ -122,8 +122,20 @@ function alignMajorAxis(pts) {
   return pts.map(([x, y]) => [x * c - y * s, x * s + y * c]);
 }
 
-/** Géométrie complète pour une forme et une taille (µm). */
+const CACHE = new Map();
+/** Géométrie complète pour une forme et une taille (µm) — mise en cache (les mutations recalculent souvent). */
 export function computeGeometry(shape) {
+  const key = `${shape.kind}|${(+shape.size).toFixed(4)}|${(+(shape.aspect || 1)).toFixed(3)}|${shape.kind === 'libre' ? JSON.stringify(shape.points) : ''}`;
+  let g = CACHE.get(key);
+  if (!g) {
+    g = computeGeometryRaw(shape);
+    if (CACHE.size > 4000) CACHE.clear();
+    CACHE.set(key, g);
+  }
+  return g;
+}
+
+function computeGeometryRaw(shape) {
   const kind = shape.kind || 'coque';
   const raw = rawOutline(shape);
   // centrage

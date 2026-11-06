@@ -7,15 +7,15 @@ import { normalizeDesign, computePhenotype } from '../simulation/genome.js';
 import { EnzymeRegistry } from '../simulation/registry.js';
 import { NMET, MI } from '../simulation/metabolism.js';
 
-const b64ToF32 = (s) => { const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Float32Array(u.buffer); };
+export const b64ToF32 = (s) => { const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Float32Array(u.buffer); };
 
 /** Environnement en miroir : champs statiques reçus à la connexion, champs dynamiques à la demande (calque affiché). */
 class RemoteEnv {
-  constructor(w) {
+  constructor(w, raw = null) {
     Object.assign(this, { gw: w.gw, gh: w.gh, n: w.gw * w.gh, cellSize: w.cellSize, gridVolume: w.gridVolume });
-    this.temperature = b64ToF32(w.temperature);
-    this.salinity = b64ToF32(w.salinity);
-    this.lightDepth = b64ToF32(w.lightDepth);
+    this.temperature = raw ? Float32Array.from(raw.temperature) : b64ToF32(w.temperature);
+    this.salinity = raw ? Float32Array.from(raw.salinity) : b64ToF32(w.salinity);
+    this.lightDepth = raw ? Float32Array.from(raw.lightDepth) : b64ToF32(w.lightDepth);
     this.pH = new Float32Array(this.n).fill(7);
     this.secreted = new Float32Array(this.n);
     this.fields = METABOLITES.map((m) => (m.env ? new Float32Array(this.n) : null));
@@ -60,6 +60,8 @@ export class RemoteWorld {
     this.usersList = [];
     this.connected = false;
     this.lastState = 0;
+    this.interval = 250; // ms entre deux états (interpolation)
+    this.key = '';
   }
 
   on(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); }
@@ -68,7 +70,7 @@ export class RemoteWorld {
   /** Ouvre le flux ; résout quand l'état initial est reçu. */
   connect(playerId, name) {
     return new Promise((resolve, reject) => {
-      const url = `${this.base}/api/stream?player=${encodeURIComponent(playerId || '')}&name=${encodeURIComponent(name || '')}`;
+      const url = `${this.base}/api/stream?player=${encodeURIComponent(playerId || '')}&name=${encodeURIComponent(name || '')}&key=${encodeURIComponent(this.key)}`;
       const es = (this.es = new EventSource(url));
       let first = true;
       es.addEventListener('init', (e) => {
@@ -158,7 +160,7 @@ export class RemoteWorld {
 
   /** Interpolation des positions entre deux états (appelée à chaque image). */
   update() {
-    const t = Math.min(1, (performance.now() - this.lastState) / 250);
+    const t = Math.min(1, (performance.now() - this.lastState) / this.interval);
     for (const c of this.cells) {
       if (c.tx === undefined) continue;
       c.x = c.fx + (c.tx - c.fx) * t; c.y = c.fy + (c.ty - c.fy) * t;
@@ -172,7 +174,7 @@ export class RemoteWorld {
   users() { return this.usersList; }
 
   async post(path, data) {
-    const r = await fetch(`${this.base}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ player: this.playerId, ...data }) });
+    const r = await fetch(`${this.base}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Petri-Key': this.key }, body: JSON.stringify({ player: this.playerId, ...data }) });
     return r.json();
   }
   launch(design, x, y) { return this.post('/api/launch', { design, x, y }); }
@@ -181,21 +183,29 @@ export class RemoteWorld {
 
   /** Charge un champ du serveur pour le calque affiché. */
   async fetchLayer(name) {
-    const r = await fetch(`${this.base}/api/layer?name=${encodeURIComponent(name)}`);
+    const r = await fetch(`${this.base}/api/layer?name=${encodeURIComponent(name)}`, { headers: { 'X-Petri-Key': this.key } });
     if (!r.ok) return;
     const d = await r.json();
-    const arr = b64ToF32(d.data);
+    this.setLayer(name, b64ToF32(d.data));
+  }
+
+  setLayer(name, arr) {
     if (name === 'pH') this.env.pH.set(arr);
     else if (name === 'secreted') this.env.secreted.set(arr);
+    else if (name === 'temperature') this.env.temperature.set(arr);
+    else if (name === 'salinity') this.env.salinity.set(arr);
     else if (MET[name]) this.env.fields[MET[name].index].set(arr);
   }
 
   /** Fiche complète d'une cellule (phénotype recalculé localement à partir du génome). */
   async fetchCell(id) {
-    const r = await fetch(`${this.base}/api/cell?id=${id}`);
+    const r = await fetch(`${this.base}/api/cell?id=${id}`, { headers: { 'X-Petri-Key': this.key } });
     if (!r.ok) return null;
-    const d = await r.json();
-    if (!d.ok) return null;
+    return this.cellFrom(await r.json());
+  }
+
+  cellFrom(d) {
+    if (!d || !d.ok) return null;
     for (const e of d.genome.customEnzymes || []) if (!this.registry.has(e.id)) { try { this.registry.register(e); } catch { /* */ } }
     const genome = normalizeDesign(d.genome);
     return {
@@ -203,4 +213,65 @@ export class RemoteWorld {
       pools: Float64Array.from(d.pools), dmg: Float64Array.from(d.dmg),
     };
   }
+}
+
+/**
+ * Monde solo simulé dans un worker : même miroir que le multijoueur, mais la « connexion » est un Worker.
+ * Le calcul tourne sur un autre cœur, l'affichage reste fluide même avec beaucoup de cellules.
+ */
+export class LocalWorld extends RemoteWorld {
+  constructor() {
+    super('');
+    this.local = true;
+    this.interval = 50;
+    this.pending = new Map();
+    this.seq = 0;
+    this.worker = new Worker(new URL('./simWorker.js', import.meta.url), { type: 'module' });
+    this.ready = new Promise((resolve) => { this._workerReady = resolve; });
+    this.worker.onmessage = (e) => this.onMessage(e.data);
+    this.worker.onerror = (e) => { console.error('Worker :', e.message); this.emit('workerError', e); };
+  }
+
+  async call(cmd, args = {}) {
+    await this.ready;
+    const id = ++this.seq;
+    return new Promise((resolve) => { this.pending.set(id, resolve); this.worker.postMessage({ id, cmd, ...args }); });
+  }
+
+  onMessage(m) {
+    if (m.type === 'ready') { this._workerReady(); return; }
+    if (m.type === 'reply') { const r = this.pending.get(m.id); this.pending.delete(m.id); r?.(m.data); return; }
+    const d = m.data;
+    switch (m.name) {
+      case 'init':
+        this.width = d.world.width; this.height = d.world.height; this.maxCells = d.world.maxCells;
+        this.env = new RemoteEnv({ ...d.world, temperature: null, salinity: null, lightDepth: null }, d.world);
+        this.events = d.events || [];
+        this.cells = []; this.cellById = new Map(); this.populations = new Map();
+        this.connected = true;
+        this.emit('init', d);
+        this._ready?.(d); this._ready = null;
+        break;
+      case 'state': this.tps = d.tps; this.applyState(d); break;
+      case 'pops': this.applyPops(d); break;
+      case 'points': this.emit('points', d); break;
+      case 'extinction': { const p = this.populations.get(d.id); if (p) p.update(d); else this.populations.set(d.id, new RemotePop(d)); this.emit('extinction', this.populations.get(d.id)); break; }
+      case 'log': this.events.push(d); if (this.events.length > 120) this.events.shift(); this.emit('event', d); break;
+      case 'envEvent': this.emit('envEvent', d); break;
+      default: break;
+    }
+  }
+
+  /** Démarre le monde (depuis une sauvegarde ou neuf) ; résout quand l'état initial est reçu. */
+  async start(opts) { await this.ready; return new Promise((resolve) => { this._ready = resolve; this.worker.postMessage({ cmd: 'init', ...opts }); }); }
+  async newWorld(opts) { await this.ready; return new Promise((resolve) => { this._ready = resolve; this.worker.postMessage({ cmd: 'newWorld', ...opts }); }); }
+  setSpeed(s) { return this.call('speed', { speed: s }); }
+  launch(design, x, y, owner) { return this.call('launch', { design, x, y, ...owner }); }
+  removePopulation(popId) { return this.call('abandon', { popId }); }
+  abandonAll(ownerId, summary) { return this.call('abandonAll', { ownerId, summary }); }
+  snapshot() { return this.call('snapshot'); }
+  challenges(ownerId, done) { return this.call('challenges', { ownerId, done }); }
+  startEvent(type) { return this.call('event', { type }); }
+  async fetchLayer(name) { const r = await this.call('layer', { name }); if (r.ok) this.setLayer(name, r.data); }
+  async fetchCell(id) { const d = await this.call('cell', { id }); for (const e of d?.genome?.customEnzymes || []) if (!this.registry.has(e.id)) { try { this.registry.register(e); } catch { /* */ } } return this.cellFrom(d); }
 }

@@ -283,3 +283,95 @@ test('livret : identifiants uniques et liens internes valides', () => {
     for (const m of p.matchAll(/\[\[([a-z0-9_]+)\|/g)) assert.ok(ids.includes(m[1]), `lien inconnu ${m[1]} dans ${s.id}`);
   }
 });
+
+import { challengeStatus } from '../src/game/challenges.js';
+import { strainDistance, compactGenome } from '../src/simulation/lineage.js';
+
+test('nouvelles enzymes : bilans exacts (uréase, synthase de signal, β-lactamase)', () => {
+  for (const id of ['urease', 'synthase_signal', 'beta_lactamase']) {
+    const e = ENZYMES.find((x) => x.id === id);
+    const a = analyzeReaction(e.substrates, e.products);
+    assert.ok(a.balanced && a.exergonic, `${id} : ${a.errors.join(', ')}`);
+  }
+});
+
+test('pH : l\'ammoniac rend le milieu basique, les acides l\'acidifient', () => {
+  const w = new World({ seed: 21, env: { gw: 4, gh: 4, uniform: { nh4: 0 } } });
+  const env = w.env;
+  env.field('nh4').fill(20); env.updatePH();
+  assert.ok(env.pH[0] > 7.5, `pH ${env.pH[0]}`);
+  env.field('nh4').fill(0); env.field('lactate').fill(20); env.updatePH();
+  assert.ok(env.pH[0] < 6.5, `pH ${env.pH[0]}`);
+});
+
+test('quorum sensing : une enzyme « quorum » est inactive sans signal', () => {
+  // milieu non régénéré (le banc uniforme remettrait le signal à sa valeur de départ)
+  const run = (signal) => {
+    const w = new World({ seed: 22, env: { gw: 6, gh: 6, sources: false } });
+    const d = { ...defaultDesign(), enzymes: { ...defaultDesign().enzymes, toxine_synthase: 2, detoxifiase: 0 }, quorum: { toxine_synthase: true } };
+    w.addPopulation(d, { count: 3, x: 30, y: 30 });
+    let tox = 0;
+    for (let i = 0; i < 40; i++) {
+      w.env.field('signal').fill(signal);
+      w.step();
+    }
+    for (const c of w.cells) tox += c.pools[MI.toxin];
+    return tox + w.env.field('toxin').reduce((a, v) => a + v, 0);
+  };
+  const off = run(0), on = run(1);
+  assert.ok(on > off * 5 + 1e-6, `toxine sans signal ${off}, avec ${on}`);
+});
+
+test('phages : spécifiques de leur hôte, CRISPR immunise et la mémoire est héritée', () => {
+  const w = new World({ seed: 23, events: false, env: { gw: 6, gh: 6, sources: false } });
+  const a = w.addPopulation({ ...defaultDesign(), name: 'A', organelles: { nucleoide: 1, ribosomes: 2, crispr: 2 } }, { count: 6, x: 30, y: 30 });
+  const b = w.addPopulation({ ...defaultDesign(), name: 'B' }, { count: 6, x: 30, y: 30 });
+  w.env.phageHost.set(7, a.id);
+  w.env.phageStrain.fill(7); w.env.field('phage').fill(3);
+  for (let i = 0; i < 300; i++) { w.env.phageStrain.fill(7); if (i % 50 === 0) w.env.field('phage').fill(3); w.step(); }
+  assert.equal(b.infections, 0, 'B n\'est pas l\'hôte de cette souche');
+  assert.ok(a.infections + a.immunized > 0, 'A a été touchée');
+  if (a.immunized) {
+    const imm = w.cells.find((c) => c.popId === a.id && c.immune);
+    if (imm) { const d = w.divide(imm, a); assert.deepEqual(d.immune, imm.immune); }
+  }
+});
+
+test('biofilm : les cellules sœurs collées sont protégées', () => {
+  const w = new World({ seed: 24, events: false, env: { gw: 6, gh: 6, uniform: RICH } });
+  w.addPopulation({ ...defaultDesign(), envelope: { ...defaultDesign().envelope, biofilm: true } }, { count: 12, x: 30, y: 30 });
+  for (let i = 0; i < 50; i++) w.step();
+  assert.ok(w.cells.some((c) => c.shield > 0.2), 'aucun bouclier');
+});
+
+test('événements : déterministes et sauvegardés', () => {
+  const mk = () => { const w = new World({ seed: 25 }); for (let i = 0; i < 6000; i++) w.step(); return w; };
+  const w1 = mk(), w2 = mk();
+  assert.deepEqual(w1.scheduler.summary(), w2.scheduler.summary());
+  assert.equal(w1.scheduler.count, w2.scheduler.count);
+  assert.ok(w1.scheduler.count >= 1, 'au moins un événement en 600 s');
+  const r = deserializeWorld(JSON.parse(JSON.stringify(serializeWorld(w1))));
+  assert.equal(r.scheduler.count, w1.scheduler.count);
+  assert.equal(r.scheduler.next, w1.scheduler.next);
+});
+
+test('lignées : la souche fondatrice existe et la sauvegarde garde l\'arbre', () => {
+  const w = new World({ seed: 26, events: false });
+  const p = w.addPopulation(defaultDesign(), { count: 10 });
+  for (let i = 0; i < 3000; i++) w.step();
+  assert.ok(p.strains.length >= 1 && p.strains[0].parent === null);
+  assert.ok(w.cells.filter((c) => c.popId === p.id).every((c) => p.strainMap.has(c.strainId)));
+  const r = deserializeWorld(JSON.parse(JSON.stringify(serializeWorld(w))));
+  assert.equal(r.populations.get(p.id).strains.length, p.strains.length);
+  assert.equal(strainDistance(compactGenome(defaultDesign()), compactGenome(defaultDesign())), 0);
+});
+
+test('défis : évaluation sans erreur et progression cohérente', () => {
+  const w = new World({ seed: 27, events: false });
+  w.addPopulation(defaultDesign(), { count: 10, ownerId: 'moi' });
+  for (let i = 0; i < 50; i++) w.step();
+  const st = challengeStatus(w, 'moi', {});
+  assert.ok(st.length >= 10);
+  const first = st.find((c) => c.id === 'premiers_pas');
+  assert.ok(first.progress[0] >= 10 && first.progress[1] === 50);
+});

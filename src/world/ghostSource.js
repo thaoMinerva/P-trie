@@ -96,6 +96,6 @@ export class GhostWorldSource extends WorldSource {
     if (g && !g.pops.some((id) => !world.populations.get(id)?.extinct)) g.online = false;
   }
 
-  serialize() { return { rng: this.rng.state, timer: this.timer, ghosts: this.ghosts, colorIndex: this.colorIndex }; }
-  deserialize(o) { if (!o) return; this.rng.state = o.rng; this.timer = o.timer; this.ghosts = o.ghosts || []; this.colorIndex = o.colorIndex || 0; }
+  serialize() { return { rng: this.rng.state, timer: this.timer, ghosts: this.ghosts, colorIndex: this.colorIndex, target: this.target }; }
+  deserialize(o) { if (!o) return; this.rng.state = o.rng; this.timer = o.timer; this.ghosts = o.ghosts || []; this.colorIndex = o.colorIndex || 0; if (o.target) this.target = o.target; }
 }

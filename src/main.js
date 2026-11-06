@@ -3,7 +3,7 @@ import { PARAMS } from './data/index.js';
 import { World } from './simulation/world.js';
 import { serializeWorld, deserializeWorld } from './simulation/serialize.js';
 import { GhostWorldSource } from './world/ghostSource.js';
-import { RemoteWorld } from './world/remoteWorld.js';
+import { RemoteWorld, LocalWorld } from './world/remoteWorld.js';
 import { identity, isMine } from './game/identity.js';
 import { Progression, newProfile, launchCost } from './game/progression.js';
 import { loadProfile, saveProfile, saveWorldSnapshot, loadWorldSnapshot, clearAll } from './game/storage.js';
@@ -22,10 +22,13 @@ import { EVENT_TYPES } from './simulation/events.js';
 import { ChatPanel } from './ui/chat.js';
 import { renderChallenges } from './ui/challengesView.js';
 import { challengeStatus, newlyCompleted } from './game/challenges.js';
+import { recordOf, topLists } from './game/leaderboard.js';
 
 const W = PARAMS.world;
 const app = { world: null, ghosts: null, speed: 1, tab: 'monde' };
 window.petri = app; // accès console (curieux, tests)
+/** Monde partagé sur un serveur (le monde solo dans un worker est aussi un « miroir », mais local). */
+const isMP = () => !!app.world?.remote && !app.world.local;
 
 // ------------------------------------------------------------------ progression
 const progression = new Progression(loadProfile() || newProfile());
@@ -33,13 +36,14 @@ progression.onChange(() => { saveProfile(progression.p); updateHud(); });
 
 // ------------------------------------------------------------------ monde
 function wireWorld(world) {
-  if (world.remote) world.on('points', (d) => progression.setServerPoints(d.points, d.totalEarned));
+  if (world.local) world.on('points', (d) => { if (d.ownerId === identity.id) progression.earn(d.gain); });
+  else if (world.remote) world.on('points', (d) => progression.setServerPoints(d.points, d.totalEarned));
   else world.on('points', (pop, gain) => { if (isMine(pop)) progression.earn(gain); });
   world.on('extinction', (pop) => {
     if (isMine(pop)) { progression.archive(pop.summary()); toast(`☠️ Votre population « ${pop.name} » s'est éteinte. Voir les archives.`, 'warn'); }
   });
   world.on('event', () => { journalDirty = true; });
-  if (world.remote) {
+  if (world.remote && !world.local) {
     world.on('challenges', (list) => { app.challenges = list; if (app.tab === 'defis') renderChallenges($('#defis-root'), list); });
     world.on('challengeDone', (c) => toast(`🎯 Défi réussi : « ${c.title} » (+${c.reward} points) !`, 'ok'));
   }
@@ -65,13 +69,26 @@ async function detectServer() {
   } catch { return null; }
 }
 
-async function bootMultiplayer() {
+async function bootMultiplayer(info) {
   let name = progression.p.mpName;
   if (!name) {
     name = (prompt('Monde partagé détecté ! Choisissez votre pseudo :', '') || '').trim() || `Joueur${Math.floor(Math.random() * 1000)}`;
     progression.p.mpName = name; saveProfile(progression.p);
   }
   const world = new RemoteWorld('');
+  if (info.needPassword) {
+    // le mot de passe est vérifié avant d'ouvrir le flux ; on le garde pour les prochaines visites
+    let key = progression.p.mpKey || '';
+    for (let tries = 0; ; tries++) {
+      const r = key ? await fetch(`api/auth?key=${encodeURIComponent(key)}`).then((x) => x.ok).catch(() => false) : false;
+      if (r) break;
+      if (tries >= 3) throw new Error('Mot de passe refusé');
+      key = (prompt(tries || key ? 'Mot de passe incorrect. Réessayez :' : '🔒 Ce monde partagé est protégé. Mot de passe :', '') || '').trim();
+      if (!key) throw new Error('Mot de passe non saisi');
+    }
+    progression.p.mpKey = key; saveProfile(progression.p);
+    world.key = key;
+  }
   const init = await world.connect(progression.p.mpId, name);
   progression.p.mpId = init.playerId; saveProfile(progression.p);
   Object.assign(identity, { id: init.playerId, name: init.name, multiplayer: true });
@@ -83,11 +100,28 @@ async function bootMultiplayer() {
 }
 
 async function boot() {
-  if (await detectServer()) {
-    try { await bootMultiplayer(); setup(); return; }
-    catch (e) { console.warn(e); toast('Serveur multijoueur injoignable : passage en solo.', 'warn'); }
+  const info = await detectServer();
+  if (info) {
+    try { await bootMultiplayer(info); setup(); return; }
+    catch (e) { console.warn(e); toast(/Mot de passe/.test(e.message) ? `${e.message} : passage en solo.` : 'Serveur multijoueur injoignable : passage en solo.', 'warn'); }
   }
   const snap = await loadWorldSnapshot();
+  // Solo : la simulation tourne dans un worker (autre cœur du processeur) ; repli sur le mode direct sinon.
+  if (typeof Worker !== 'undefined') {
+    try {
+      const world = new LocalWorld();
+      const init = await Promise.race([
+        world.start(snap?.world ? { snapshot: snap } : { size: progression.p.worldSize || 'petit' }),
+        new Promise((_, no) => { world.on('workerError', () => no(new Error('worker'))); setTimeout(() => no(new Error('délai')), 15000); }),
+      ]);
+      wireWorld(world);
+      Object.assign(app, { world, ghosts: world });
+      if (snap?.world) toast('Monde restauré depuis la sauvegarde locale.', 'ok');
+      void init;
+      setup();
+      return;
+    } catch (e) { console.warn('Worker indisponible, simulation dans la page :', e); }
+  }
   if (snap?.world) {
     try {
       const world = deserializeWorld(snap.world);
@@ -104,8 +138,9 @@ async function boot() {
 
 async function saveAll(quiet = true) {
   saveProfile(progression.p);
-  if (app.world.remote) { if (!quiet) toast('Profil sauvegardé (le monde partagé est sauvegardé par le serveur).', 'ok'); return; }
-  const ok = await saveWorldSnapshot({ world: serializeWorld(app.world), ghosts: app.ghosts.serialize(), savedAt: Date.now() });
+  if (isMP()) { if (!quiet) toast('Profil sauvegardé (le monde partagé est sauvegardé par le serveur).', 'ok'); return; }
+  const snap = app.world.local ? await app.world.snapshot() : { world: serializeWorld(app.world), ghosts: app.ghosts.serialize(), savedAt: Date.now() };
+  const ok = await saveWorldSnapshot(snap);
   if (!quiet) toast(ok ? 'Partie sauvegardée.' : 'Échec de la sauvegarde.', ok ? 'ok' : 'warn');
 }
 
@@ -132,26 +167,35 @@ function setup() {
 
   livret = new Livret($('#livret-root'));
   setLivretOpener((id) => { showTab('livret'); livret.open(id); });
-  const chat = new ChatPanel($('#chat'), { world: app.world, me: identity });
+  const chat = new ChatPanel($('#chat'), { world: app.world, me: identity, multiplayer: isMP() });
   chat.onToggle = () => requestAnimationFrame(() => view.resize());
 
   $$('.tab').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
   $$('.speed').forEach((b) => b.addEventListener('click', () => setSpeed(+b.dataset.speed)));
   $('#btn-fit').addEventListener('click', () => view.fit());
   $('#btn-save').addEventListener('click', () => saveAll(false));
-  if (app.world.remote) {
-    $('#btn-new-world').style.display = 'none';
+  const sizeSel = $('#world-size');
+  for (const [k, sz] of Object.entries(PARAMS.worldSizes)) sizeSel.append(h('option', { value: k, selected: k === (progression.p.worldSize || 'petit') }, sz.name));
+  if (isMP()) {
+    $('#btn-new-world').style.display = 'none'; sizeSel.parentElement.style.display = 'none';
     $$('.speed').forEach((b) => { b.disabled = true; b.title = 'Le monde partagé avance au rythme du serveur'; });
     $('.speeds').after(h('span', { class: 'pill mp', id: 'hud-mp', title: 'Connecté au serveur multijoueur' }, '🌐 ', h('b', {}, identity.name), ' · ', h('span', { id: 'hud-players' }, '')));
   }
   $('#btn-new-world').addEventListener('click', () => {
     if (!confirm('Créer un nouveau monde ? Les populations actuelles disparaîtront (vos points, conceptions et enzymes sont conservés).')) return;
+    const size = sizeSel.value;
+    progression.p.worldSize = size; saveProfile(progression.p);
+    if (app.world.local) {
+      for (const p of app.world.livingPopulations()) if (isMine(p)) progression.archive({ ...p.summary(), extinct: true, extinctAt: app.world.time, extinctionSummary: 'Monde réinitialisé par le joueur.' });
+      app.world.newWorld({ size }).then(() => { selected = null; view.selectedId = null; view.fit(); toast(`Nouveau monde créé (${PARAMS.worldSizes[size].name}).`, 'ok'); });
+      return;
+    }
     for (const p of app.world.livingPopulations()) if (isMine(p)) { p.markExtinct(app.world.time); p.extinctionSummary = 'Monde réinitialisé par le joueur.'; progression.archive(p.summary()); }
     Object.assign(app, newWorld()); selected = null; view.fit(); toast('Nouveau monde créé.', 'ok');
   });
   $('#btn-reset').addEventListener('click', async () => {
     if (!confirm('Tout effacer (points, conceptions, enzymes, archives, monde) ?')) return;
-    await clearAll(); progression.p = newProfile(); saveProfile(progression.p); Object.assign(app, newWorld()); location.reload();
+    await clearAll(); progression.p = newProfile(); saveProfile(progression.p); location.reload();
   });
 
   editor = new Editor($('#editor-root'), { progression, onLaunch: launch });
@@ -176,7 +220,7 @@ function showTab(tab) {
   $$('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
   $$('.view').forEach((v) => v.classList.toggle('on', v.id === `view-${tab}`));
   if (tab === 'monde') requestAnimationFrame(() => view.resize());
-  if (tab === 'populations') renderPopulations($('#populations-root'), app.world, progression, app.ghosts, popActions);
+  if (tab === 'populations') renderPopulations($('#populations-root'), app.world, progression, app.ghosts, popActions, leaderboard());
   if (tab === 'archives') renderArchives($('#archives-root'), app.world, progression);
   if (tab === 'editeur') { editor.renderViability(); editor.drawPreview(); }
   if (tab === 'atelier') workshop.renderRight();
@@ -185,29 +229,56 @@ function showTab(tab) {
   if (tab === 'defis') renderChallenges($('#defis-root'), currentChallenges());
 }
 
-// Défis : évalués localement en solo, par le serveur en multijoueur.
+// Défis : évalués là où tourne la simulation (worker, page ou serveur).
 function currentChallenges() {
-  if (app.world.remote) return app.challenges || challengeStatus(app.world, '__aucun__', {});
+  if (app.world.remote) return app.challenges || challengeStatus({ populations: new Map(), cells: [] }, '__aucun__', {});
   return challengeStatus(app.world, identity.id, progression.p.challenges || {});
 }
-function checkChallenges() {
-  if (app.world.remote) return;
+function award(c) {
+  progression.p.challenges[c.id] = Math.round(app.world.time);
+  progression.earn(c.reward);
+  toast(`🎯 Défi réussi : « ${c.title} » (+${c.reward} points) !`, 'ok');
+}
+async function checkChallenges() {
+  if (isMP()) return;
   progression.p.challenges = progression.p.challenges || {};
+  if (app.world.local) {
+    const list = await app.world.challenges(identity.id, progression.p.challenges);
+    for (const c of list) if (!c.done && c.progress && c.progress[0] >= c.progress[1]) { award(c); c.done = true; }
+    app.challenges = list;
+    return;
+  }
   for (const c of newlyCompleted(app.world, identity.id, progression.p.challenges)) {
-    progression.p.challenges[c.id] = Math.round(app.world.time);
-    progression.earn(c.reward);
-    toast(`🎯 Défi réussi : « ${c.title} » (+${c.reward} points) !`, 'ok');
+    award(c);
   }
 }
 
-function setSpeed(s) { app.speed = s; $$('.speed').forEach((b) => b.classList.toggle('on', +b.dataset.speed === s)); }
+function setSpeed(s) {
+  if (isMP()) return;
+  if (app.world.local) app.world.setSpeed(s);
+  app.speed = s; $$('.speed').forEach((b) => b.classList.toggle('on', +b.dataset.speed === s)); }
+
+// Classements : demandés au serveur en multijoueur, calculés sur place en solo.
+let lbCache = null, lbAt = 0;
+function leaderboard() {
+  if (isMP()) {
+    if (performance.now() - lbAt > 10000) {
+      lbAt = performance.now();
+      fetch('api/leaderboard', { headers: { 'X-Petri-Key': app.world.key || '' } }).then((r) => r.json()).then((d) => { lbCache = d; }).catch(() => {});
+    }
+    return lbCache;
+  }
+  const entries = [...app.world.populations.values()].map((p) => recordOf(p, app.world.time));
+  for (const a of progression.p.archives) entries.push(recordOf({ ...a, extinct: true, ownerId: identity.id, ownerName: 'Vous' }, app.world.time));
+  return { players: null, boards: topLists(entries) };
+}
 
 const popActions = {
   focus: (p) => focusPop(p),
   abandon: (p) => {
     if (!confirm(`Abandonner « ${p.name} » ? Ses cellules seront retirées du monde.`)) return;
-    Promise.resolve(app.world.removePopulation(p.id)).then(() => setTimeout(() => renderPopulations($('#populations-root'), app.world, progression, app.ghosts, popActions), 400));
-    renderPopulations($('#populations-root'), app.world, progression, app.ghosts, popActions);
+    Promise.resolve(app.world.removePopulation(p.id)).then(() => setTimeout(() => renderPopulations($('#populations-root'), app.world, progression, app.ghosts, popActions, leaderboard()), 400));
+    renderPopulations($('#populations-root'), app.world, progression, app.ghosts, popActions, leaderboard());
   },
 };
 
@@ -222,6 +293,14 @@ function focusPop(p) {
 
 function launch(design, manual) {
   const doLaunch = async (x, y) => {
+    if (app.world.local) {
+      if (!progression.spend(design)) { toast('Points insuffisants.', 'warn'); return; }
+      const r = await app.world.launch(design, x, y, { ownerId: identity.id, ownerName: 'Vous' });
+      if (!r.ok) { toast(`Lancement impossible : ${r.error}`, 'warn'); return; }
+      toast(`🚀 « ${design.name} » lancée (−${launchCost(design)} points).`, 'ok');
+      setTimeout(() => { const pop = app.world.populations.get(r.popId); if (pop) focusPop(pop); editor.renderViability(); }, 150);
+      return;
+    }
     if (app.world.remote) {
       const r = await app.world.launch(design, x, y).catch((e) => ({ ok: false, error: e.message }));
       if (!r.ok) { toast(`Lancement refusé : ${r.error}`, 'warn'); return; }
@@ -269,7 +348,7 @@ const sheetActions = {
 };
 
 // Multijoueur : télécharge le champ du calque affiché (le monde est simulé par le serveur).
-const LAYER_SOURCE = { ph: 'pH', secreted: 'secreted' };
+const LAYER_SOURCE = { ph: 'pH', secreted: 'secreted', temperature: 'temperature', salinity: 'salinity' };
 function refreshRemoteLayer() {
   if (!app.world.remote) return;
   const L = LAYERS[view.layer];
@@ -306,7 +385,7 @@ function updateHud() {
     const l = app.world.env.lightLevel;
     $('#hud-day').textContent = l > 0.7 ? '☀️ jour' : l > 0.35 ? '🌤️ crépuscule' : '🌙 nuit';
     const pl = $('#hud-players');
-    if (pl && app.world.remote) pl.textContent = `${app.world.users().filter((u) => u.human && u.online).length} joueur(s) en ligne`;
+    if (pl && isMP()) pl.textContent = `${app.world.users().filter((u) => u.human && u.online).length} joueur(s) en ligne`;
   }
 }
 
@@ -315,7 +394,8 @@ let last = performance.now(), acc = 0, panelTimer = 0, chartTimer = 0, realTps =
 function loop(now) {
   const dtReal = Math.min(0.1, (now - last) / 1000);
   last = now;
-  if (app.world.remote) { app.world.update(); tpsCount += dtReal * W.ticksPerSecond * (app.world.speed || 1); }
+  if (app.world.local) { app.world.update(); tpsCount += dtReal * (app.world.tps || 0); }
+  else if (app.world.remote) { app.world.update(); tpsCount += dtReal * W.ticksPerSecond * (app.world.speed || 1); }
   else if (app.speed > 0) {
     acc += dtReal * W.ticksPerSecond * app.speed;
     const t0 = performance.now();
@@ -340,13 +420,13 @@ function loop(now) {
       if (journalDirty) { renderJournal($('#journal'), app.world); journalDirty = false; }
     }
   }
-  if (chartTimer > 2 && app.tab === 'monde') refreshRemoteLayer();
+  if (app.tab === 'monde' && (chartTimer > 2 || (app.world.local && panelTimer === 0))) refreshRemoteLayer();
   if (chartTimer > 2) {
     chartTimer = 0;
-    checkChallenges();
+    checkChallenges().catch(() => {});
     if (app.tab === 'defis') renderChallenges($('#defis-root'), currentChallenges());
     if (app.tab === 'monde') lineChart($('#world-chart'), popSeries(app.world, (p) => !p.extinct || app.world.time - p.extinctAt < 120), { log: true, xFmt: (v) => `${Math.round(v)} s` });
-    if (app.tab === 'populations') renderPopulations($('#populations-root'), app.world, progression, app.ghosts, popActions);
+    if (app.tab === 'populations') renderPopulations($('#populations-root'), app.world, progression, app.ghosts, popActions, leaderboard());
   }
   requestAnimationFrame(loop);
 }
